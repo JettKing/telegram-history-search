@@ -1,0 +1,12 @@
+name = "tg-history-search"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+# Set secrets in Cloudflare, not in this file:
+# BOT_TOKEN, ADMIN_TOKEN, COLLECTOR_TOKEN, ADD_CHANNEL_CODE
+
+[[d1_databases]]
+binding = "DB"
+database_name = "tg-history-search"
+database_id = "2cd55131-fbc3-48bf-b9bc-121ae1333e79"

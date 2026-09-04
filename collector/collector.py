@@ -1,0 +1,69 @@
+import os, asyncio
+import httpx
+from telethon import TelegramClient
+from telethon.sessions import StringSession
+
+API_ID=int(os.environ["TG_API_ID"])
+API_HASH=os.environ["TG_API_HASH"]
+SESSION=os.environ["TG_SESSION"]
+API_BASE_URL=os.environ["API_BASE_URL"].rstrip("/")
+TOKEN=os.environ["COLLECTOR_TOKEN"]
+BATCH_SIZE=int(os.environ.get("BATCH_SIZE","250"))
+TARGET_CHANNEL=os.environ.get("TARGET_CHANNEL","").strip().lstrip("@")
+
+def auth(): return {"Authorization":f"Bearer {TOKEN}"}
+
+async def main():
+    client=TelegramClient(StringSession(SESSION),API_ID,API_HASH)
+    await client.start()
+    async with httpx.AsyncClient(timeout=90) as http:
+        r=await http.get(f"{API_BASE_URL}/api/collector/channels",headers=auth());r.raise_for_status()
+        channels=r.json().get("channels",[])
+        if TARGET_CHANNEL:
+            channels=[c for c in channels if (c.get("username") or "").lstrip("@")==TARGET_CHANNEL or str(c.get("telegram_id"))==TARGET_CHANNEL]
+        print(f"enabled channels: {len(channels)}" )
+        for channel in channels:
+            try: await collect_channel(client,http,channel)
+            except Exception as exc: print(f"[ERROR] {channel.get('username') or channel.get('telegram_id')}: {exc}")
+    await client.disconnect()
+
+async def collect_channel(client,http,channel):
+    ref=channel.get("username") or channel.get("telegram_id")
+    entity=await client.get_entity(ref)
+    username=getattr(entity,"username",None) or channel.get("username") or ""
+    title=getattr(entity,"title",None) or channel.get("title") or username
+    last_id=int(channel.get("last_message_id") or 0)
+    run_id=None; imported=0
+    sr=await http.post(f"{API_BASE_URL}/api/collector/run/start",json={"channel_id":str(entity.id)},headers=auth())
+    sr.raise_for_status();run_id=sr.json().get("run_id")
+    print(f"[SYNC] {title} (@{username}) after message {last_id}")
+    try:
+        batch=[]
+        async for msg in client.iter_messages(entity,min_id=last_id,reverse=True):
+            if not msg.message and not msg.media: continue
+            media_type=type(msg.media).__name__ if msg.media else None
+            media_name=None;media_size=None
+            if getattr(msg,"file",None):
+                media_name=getattr(msg.file,"name",None)
+                media_size=getattr(msg.file,"size",None)
+            batch.append({
+                "channel_id":str(entity.id),"channel_username":username,"channel_title":title,
+                "message_id":msg.id,"published_at":msg.date.isoformat() if msg.date else None,
+                "edited_at":msg.edit_date.isoformat() if msg.edit_date else None,"text":msg.message or "",
+                "media_type":media_type,"media_name":media_name,"media_size":media_size,
+                "message_url":f"https://t.me/{username}/{msg.id}" if username else None,"search_text":msg.message or ""
+            })
+            if len(batch)>=BATCH_SIZE:
+                await push(http,batch);imported+=len(batch);batch.clear()
+        if batch: await push(http,batch);imported+=len(batch)
+        if run_id: await http.post(f"{API_BASE_URL}/api/collector/run/finish",json={"run_id":run_id,"status":"success","imported":imported},headers=auth())
+        print(f"[DONE] {title}: imported {imported}")
+    except Exception as exc:
+        if run_id:
+            await http.post(f"{API_BASE_URL}/api/collector/run/finish",json={"run_id":run_id,"status":"error","imported":imported,"error":str(exc)[:500]},headers=auth())
+        raise
+
+async def push(http,messages):
+    r=await http.post(f"{API_BASE_URL}/api/ingest",json={"messages":messages},headers=auth());r.raise_for_status();print(r.json())
+
+if __name__=="__main__": asyncio.run(main())
