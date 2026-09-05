@@ -109,3 +109,25 @@ CREATE TABLE IF NOT EXISTS auth_code_uses (
   FOREIGN KEY(code_id) REFERENCES auth_codes(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_auth_code_uses_code ON auth_code_uses(code_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS auth_sessions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  token_hash TEXT UNIQUE NOT NULL,
+  role TEXT NOT NULL,
+  auth_code_id INTEGER,
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_auth_sessions_expiry ON auth_sessions(expires_at);
+
+CREATE TABLE IF NOT EXISTS admin_audit (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  role TEXT NOT NULL,
+  auth_code_id INTEGER,
+  action TEXT NOT NULL,
+  resource TEXT NOT NULL,
+  resource_id TEXT,
+  details TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_created ON admin_audit(created_at DESC);
