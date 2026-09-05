@@ -63,23 +63,31 @@ await tg(env,"sendMessage",{chat_id:chatId,text:"请输入 /search 关键词，�
 async function apiSearch(req,env){const u=new URL(req.url);return json({query:u.searchParams.get("q")||"",...await search(env,{q:u.searchParams.get("q"),channel:u.searchParams.get("channel"),from:u.searchParams.get("from"),to:u.searchParams.get("to"),media:u.searchParams.get("media"),limit:u.searchParams.get("limit"),offset:u.searchParams.get("offset")})});}
 async function apiLatest(req,env){const u=new URL(req.url);return json(await latest(env,{limit:u.searchParams.get("limit"),offset:u.searchParams.get("offset"),channel:u.searchParams.get("channel"),media:u.searchParams.get("media")}));}
 async function apiChannels(req,env){return json({channels:await channels(env,true)});}
+async function resolveChannel(env,username){
+  const r=await tg(env,"getChat",{chat_id:`@${username}`});
+  if(!r?.ok||!r.result)return null;
+  return {telegram_id:String(r.result.id),username:String(r.result.username||username).replace(/^@/,""),title:clean(r.result.title||r.result.first_name||username).slice(0,160)};
+}
 async function publicAddChannel(req,env){
   if(req.method!=="POST")return json({error:"method_not_allowed"},405);
   await ensureOwnershipSchema(env);
   const b=await req.json().catch(()=>({}));
   const username=clean(b.username||b.telegram_id||"").replace(/^https?:\/\/t\.me\//,"" ).replace(/^@/,"").replace(/\/$/,"");
-  const title=clean(b.title||username).slice(0,160);
   const code=codeNormalize(b.auth_code||"");
   if(!username)return json({error:"username_required",message:"请输入频道用户名。"},400);
   if(!/^[A-Za-z0-9_]{3,64}$/.test(username))return json({error:"invalid_username",message:"频道用户名格式不正确。"},400);
   if(!code)return json({error:"auth_code_required",message:"请输入授权码。"},400);
-  const existing=await env.DB.prepare("SELECT id FROM channels WHERE username=? OR telegram_id=? LIMIT 1").bind(username,username).first();
-  if(existing)return json({ok:true,already_exists:true,message:"频道已经存在，无需重复添加。"});
+  const known=await env.DB.prepare("SELECT id,deleted_at FROM channels WHERE username=? OR telegram_id=? LIMIT 1").bind(username,username).first();
+  if(known)return json({ok:true,already_exists:true,message:known.deleted_at?"该频道曾经添加过，当前仍在清理队列中。":"该频道已经添加，无需重复添加。"});
+  const identity=await resolveChannel(env,username).catch(()=>null);
+  if(!identity)return json({error:"channel_lookup_failed",message:"无法自动识别频道名称，请确认频道用户名正确且频道可被机器人访问。"},422);
+  const existing=await env.DB.prepare("SELECT id,deleted_at FROM channels WHERE username=? OR telegram_id=? LIMIT 1").bind(identity.username,identity.telegram_id).first();
+  if(existing)return json({ok:true,already_exists:true,message:existing.deleted_at?"该频道曾经添加过，当前仍在清理队列中。":"该频道已经添加，无需重复添加。"});
   const hash=await sha256Hex(code);
   const claim=await env.DB.prepare(`UPDATE auth_codes SET used_count=used_count+1,last_used_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE code_hash=? AND enabled=1 AND (max_uses IS NULL OR used_count<max_uses) AND (expires_at IS NULL OR expires_at>CURRENT_TIMESTAMP)`).bind(hash).run();const codeRow=await env.DB.prepare("SELECT id FROM auth_codes WHERE code_hash=? LIMIT 1").bind(hash).first();
   if(Number(claim.meta?.changes||0)!==1)return json({error:"invalid_auth_code",message:"授权码无效、已停用、已过期或使用次数已达上限。"},403);
   try{
-    await env.DB.prepare(`INSERT INTO channels(telegram_id,username,title,enabled,owner_auth_code_id)VALUES(?,?,?,?,?)`).bind(username,username,title,codeRow?.id||null).run();
+    await env.DB.prepare(`INSERT INTO channels(telegram_id,username,title,enabled,owner_auth_code_id)VALUES(?,?,?,?,?)`).bind(identity.telegram_id,identity.username,identity.title,1,codeRow?.id||null).run();
     const c=await env.DB.prepare("SELECT id,used_count FROM auth_codes WHERE code_hash=? LIMIT 1").bind(hash).first();
     if(c)await env.DB.prepare("INSERT INTO auth_code_uses(code_id,action,ip,user_agent)VALUES(?,?,?,?)").bind(c.id,"add_channel",req.headers.get("CF-Connecting-IP")||req.headers.get("x-forwarded-for")||null,(req.headers.get("user-agent")||"").slice(0,500)).run();
     return json({ok:true,message:"频道添加成功，后续采集任务会自动同步。"});
@@ -94,7 +102,7 @@ async function publicAddChannel(req,env){
     return json({error:"channel_create_failed",message:"频道添加失败，请稍后重试。"},409);
   }
 }
-const SUBMIT_HTML=`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#eef8ff"><title>提交频道 · Telegram Search</title><style>:root{font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC",sans-serif;color:#102a43;background:#f5faff}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 85% 0,#dff2ff,#f7fbff 38%,#fff 78%)}main{max-width:560px;margin:auto;padding:52px 18px}.brand{text-align:center;margin-bottom:28px}.logo{width:64px;height:64px;margin:0 auto 16px;border-radius:20px;background:#2e91f5;color:#fff;display:grid;place-items:center;font-size:34px;box-shadow:0 12px 28px rgba(46,145,245,.2)}h1{margin:0;font-size:30px;letter-spacing:-.5px}p{color:#7189a0;line-height:1.8}.panel{background:#fff;border:1px solid #dcecff;border-radius:24px;box-shadow:0 14px 36px rgba(49,128,205,.08);padding:22px}.field{margin-bottom:14px}.field label{display:block;font-size:13px;color:#5f7890;margin:0 0 7px}.field input{width:100%;border:1px solid #cfe2f5;border-radius:14px;padding:14px 15px;font:inherit;outline:none}.field input:focus{border-color:#5aaaf5;box-shadow:0 0 0 4px #eaf5ff}.btn{width:100%;border:0;border-radius:14px;padding:14px;background:#2e91f5;color:#fff;font-weight:750;font-size:15px;cursor:pointer}.msg{margin-top:12px;min-height:20px;font-size:13px;color:#7189a0}.back{display:block;text-align:center;margin-top:18px;color:#2e91f5;text-decoration:none;font-size:13px}</style></head><body><main><div class="brand"><div class="logo">➤</div><h1>提交频道</h1><p>使用有效授权码添加可检索的 Telegram 频道。</p></div><div class="panel"><div class="field"><label>频道</label><input id="channel" placeholder="@username 或 t.me/username" autocomplete="off"></div><div class="field"><label>授权码</label><input id="code" placeholder="请输入授权码" autocomplete="off" spellcheck="false"></div><div class="field"><label>频道显示名称（可选）</label><input id="title" placeholder="频道名称"></div><button class="btn" onclick="submitChannel()">验证并添加</button><div id="msg" class="msg"></div></div><a class="back" href="https://jettking.github.io/telegram-history-search/">返回历史检索</a></main><script>const $=s=>document.querySelector(s);const clean=s=>String(s||'').trim();async function submitChannel(){const username=clean($('#channel').value),auth_code=clean($('#code').value),title=clean($('#title').value);$('#msg').textContent='正在验证…';try{const r=await fetch('/api/public/channels',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username,auth_code,title})});const d=await r.json();$('#msg').textContent=r.ok?(d.message||'频道添加成功。'):(d.message||d.error||'添加失败。');if(r.ok){$('#msg').textContent='验证并添加成功，正在进入管理员后台…';setTimeout(()=>location.href='/admin',700);}}catch(e){$('#msg').textContent='网络错误，请稍后重试。'}}</script></body></html>`;
+const SUBMIT_HTML=`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#eef8ff"><title>提交频道 · Telegram Search</title><style>:root{font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC",sans-serif;color:#102a43;background:#f5faff}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 85% 0,#dff2ff,#f7fbff 38%,#fff 78%)}main{max-width:560px;margin:auto;padding:52px 18px}.brand{text-align:center;margin-bottom:28px}.logo{width:64px;height:64px;margin:0 auto 16px;border-radius:20px;background:#2e91f5;color:#fff;display:grid;place-items:center;font-size:34px;box-shadow:0 12px 28px rgba(46,145,245,.2)}h1{margin:0;font-size:30px;letter-spacing:-.5px}p{color:#7189a0;line-height:1.8}.panel{background:#fff;border:1px solid #dcecff;border-radius:24px;box-shadow:0 14px 36px rgba(49,128,205,.08);padding:22px}.field{margin-bottom:14px}.field label{display:block;font-size:13px;color:#5f7890;margin:0 0 7px}.field input{width:100%;border:1px solid #cfe2f5;border-radius:14px;padding:14px 15px;font:inherit;outline:none}.field input:focus{border-color:#5aaaf5;box-shadow:0 0 0 4px #eaf5ff}.btn{width:100%;border:0;border-radius:14px;padding:14px;background:#2e91f5;color:#fff;font-weight:750;font-size:15px;cursor:pointer}.msg{margin-top:12px;min-height:20px;font-size:13px;color:#7189a0}.back{display:block;text-align:center;margin-top:18px;color:#2e91f5;text-decoration:none;font-size:13px}</style></head><body><main><div class="brand"><div class="logo">➤</div><h1>提交频道</h1><p>使用有效授权码添加可检索的 Telegram 频道。</p></div><div class="panel"><div class="field"><label>频道</label><input id="channel" placeholder="@username 或 t.me/username" autocomplete="off"></div><div class="field"><label>授权码</label><input id="code" placeholder="请输入授权码" autocomplete="off" spellcheck="false"></div><button class="btn" onclick="submitChannel()">验证并添加</button><div id="msg" class="msg"></div></div><a class="back" href="https://jettking.github.io/telegram-history-search/">返回历史检索</a></main><script>const $=s=>document.querySelector(s);const clean=s=>String(s||'').trim();async function submitChannel(){const username=clean($('#channel').value),auth_code=clean($('#code').value);$('#msg').textContent='正在验证…';try{const r=await fetch('/api/public/channels',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username,auth_code})});const d=await r.json();$('#msg').textContent=r.ok?(d.message||'频道添加成功。'):(d.message||d.error||'添加失败。');if(r.ok){$('#msg').textContent='验证并添加成功，正在进入管理员后台…';setTimeout(()=>location.href='/admin',700);}}catch(e){$('#msg').textContent='网络错误，请稍后重试。'}}</script></body></html>`;
 
 async function ensureOwnershipSchema(env){
   await env.DB.prepare("ALTER TABLE channels ADD COLUMN owner_auth_code_id INTEGER").run().catch(()=>{});
@@ -122,9 +130,15 @@ async function adminChannels(req,env){
   // 管理后台已经通过 ADMIN_TOKEN 完成身份认证；管理员添加频道无需额外授权码。
   const username=clean(b.username||b.telegram_id||"").replace(/^https?:\/\/t\.me\//,"" ).replace(/^@/,"").replace(/\/$/,"");
   if(!username)return json({error:"username_required"},400);
-  const telegramId=clean(b.telegram_id||username);const title=clean(b.title||username);
-  await env.DB.prepare(`INSERT INTO channels(telegram_id,username,title,enabled)VALUES(?,?,?,1) ON CONFLICT(telegram_id)DO UPDATE SET username=excluded.username,title=excluded.title,enabled=1,updated_at=CURRENT_TIMESTAMP`).bind(telegramId,username,title).run();
-  return json({ok:true});
+  if(!/^[A-Za-z0-9_]{3,64}$/.test(username))return json({error:"invalid_username",message:"频道用户名格式不正确。"},400);
+  const known=await env.DB.prepare("SELECT id,deleted_at FROM channels WHERE username=? OR telegram_id=? LIMIT 1").bind(username,username).first();
+  if(known)return json({ok:false,already_exists:true,message:known.deleted_at?"该频道曾经添加过，当前仍在清理队列中。":"该频道已经添加，无需重复添加。"},409);
+  const identity=await resolveChannel(env,username).catch(()=>null);
+  if(!identity)return json({error:"channel_lookup_failed",message:"无法自动识别频道名称，请确认频道用户名正确且频道可被机器人访问。"},422);
+  const existing=await env.DB.prepare("SELECT id,deleted_at FROM channels WHERE username=? OR telegram_id=? LIMIT 1").bind(identity.username,identity.telegram_id).first();
+  if(existing)return json({ok:false,already_exists:true,message:existing.deleted_at?"该频道曾经添加过，当前仍在清理队列中。":"该频道已经添加，无需重复添加。"},409);
+  await env.DB.prepare(`INSERT INTO channels(telegram_id,username,title,enabled)VALUES(?,?,?,1)`).bind(identity.telegram_id,identity.username,identity.title).run();
+  return json({ok:true,channel:{telegram_id:identity.telegram_id,username:identity.username,title:identity.title},message:`已自动识别频道：${identity.title}`});
 }
 async function adminAuthCodes(req,env){
   if(!(await requireSuperAdmin(req,env)))return json({error:"unauthorized"},401);
@@ -255,7 +269,7 @@ const ADMIN_HTML=`<!doctype html>
     <div class="section-grid">
       <section id="channels" class="panel">
         <div class="panel-head"><div><h2 class="panel-title">添加频道</h2><div class="panel-sub">仅超级管理员可添加频道</div></div></div>
-        <div class="form"><div class="field"><input id="channel" placeholder="@username 或 t.me/username" autocomplete="off"></div><div class="field"><input id="title" placeholder="频道显示名称（可选）"></div><button class="btn primary" onclick="add()">添加频道</button></div>
+        <div class="form"><div class="field"><input id="channel" placeholder="@username 或 t.me/username" autocomplete="off"></div><div class="field"></div><button class="btn primary" onclick="add()">添加频道</button></div>
         <div id="msg" class="message"></div>
       </section>
       <section id="codes" class="panel">
