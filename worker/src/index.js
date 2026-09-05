@@ -89,6 +89,7 @@ async function adminCodeLogin(req,env){const b=await req.json().catch(()=>({}));
 async function adminChannels(req,env){
   if(!(await requireAdmin(req,env)))return json({error:"unauthorized"},401);
   if(req.method==="GET")return json({channels:await channels(env,false)});
+  if(!(await requireSuperAdmin(req,env)))return json({error:"forbidden",message:"只有超级管理员可以添加频道。"},403);
   const b=await req.json().catch(()=>({}));
   // 管理后台已经通过 ADMIN_TOKEN 完成身份认证；管理员添加频道无需额外授权码。
   const username=clean(b.username||b.telegram_id||"").replace(/^https?:\/\/t\.me\//,"" ).replace(/^@/,"").replace(/\/$/,"");
