@@ -174,7 +174,7 @@ const ADMIN_HTML=`<!doctype html>
   <nav class="nav">
     <button class="active" onclick="scrollToId('overview')">⌂　概览</button>
     <button onclick="scrollToId('channels')">▣　频道管理</button>
-    <button onclick="location.href='/admin/auth'">⌑　授权管理</button>
+    <button class="auth-nav" onclick="scrollToId('codes')">⌑　授权管理</button>
     <button onclick="scrollToId('logs')">☷　采集日志</button>
     <button onclick="scrollToId('media')">▥　媒体统计</button>
   </nav>
@@ -223,7 +223,7 @@ const ADMIN_HTML=`<!doctype html>
 </div>
 <div class="mobile-nav"><button class="active" onclick="scrollToId('overview')">概览</button><button onclick="scrollToId('channelList')">频道</button><button onclick="scrollToId('codes')">授权管理</button><button onclick="scrollToId('logs')">日志</button><button onclick="scrollToId('media')">统计</button></div>
 <script>
-let token=localStorage.getItem('tg_admin_token')||'';if(!token)location.replace('/admin/login');const H={'content-type':'application/json','x-admin-token':token};let currentRole=localStorage.getItem('tg_admin_role')||'admin';function applyRole(){const restricted=currentRole!=='super_admin';document.querySelectorAll('#authPanel').forEach(x=>x.style.display='none');if(restricted){document.querySelectorAll('#channels,#codes,.mobile-nav button:nth-child(3)').forEach(x=>{if(x)x.style.display='none'});}}let channelsCache=[];function loginAdmin(){const value=$('#adminToken').value.trim();if(!value){$('#authMsg').textContent='请输入 ADMIN_TOKEN。';return}localStorage.setItem('tg_admin_token',value);location.reload();}
+let token=localStorage.getItem('tg_admin_token')||'';if(!token)location.replace('/admin/login');const H={'content-type':'application/json','x-admin-token':token};let currentRole=localStorage.getItem('tg_admin_role')||'admin';function applyRole(){const restricted=currentRole!=='super_admin';document.querySelectorAll('#authPanel').forEach(x=>x.style.display='none');if(restricted){document.querySelectorAll('#channels,#codes,.auth-nav,.mobile-nav button:nth-child(3)').forEach(x=>{if(x)x.style.display='none'});}}let channelsCache=[];function loginAdmin(){const value=$('#adminToken').value.trim();if(!value){$('#authMsg').textContent='请输入 ADMIN_TOKEN。';return}localStorage.setItem('tg_admin_token',value);location.reload();}
 const $=s=>document.querySelector(s);const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(u,o={}){const r=await fetch(u,{...o,headers:{...H,...(o.headers||{})}});if(r.status===401){localStorage.removeItem('tg_admin_token');location.replace('/admin/login');throw Error('unauthorized')}return r.json()}
 function scrollToId(id){document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'});document.querySelectorAll('.nav button,.mobile-nav button').forEach(b=>b.classList.remove('active'));}
