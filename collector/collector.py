@@ -1,4 +1,5 @@
 import os, asyncio
+from datetime import timezone
 import httpx
 from telethon import TelegramClient
 from telethon.sessions import StringSession
@@ -12,6 +13,13 @@ BATCH_SIZE=int(os.environ.get("BATCH_SIZE","250"))
 TARGET_CHANNEL=os.environ.get("TARGET_CHANNEL","").strip().lstrip("@")
 
 def auth(): return {"Authorization":f"Bearer {TOKEN}"}
+
+def utc_iso(value):
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        value=value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc).isoformat().replace("+00:00","Z")
 
 async def main():
     client=TelegramClient(StringSession(SESSION),API_ID,API_HASH)
@@ -48,8 +56,8 @@ async def collect_channel(client,http,channel):
                 media_size=getattr(msg.file,"size",None)
             batch.append({
                 "channel_id":str(entity.id),"channel_username":username,"channel_title":title,
-                "message_id":msg.id,"published_at":msg.date.isoformat() if msg.date else None,
-                "edited_at":msg.edit_date.isoformat() if msg.edit_date else None,"text":msg.message or "",
+                "message_id":msg.id,"published_at":utc_iso(msg.date),
+                "edited_at":utc_iso(msg.edit_date),"text":msg.message or "",
                 "media_type":media_type,"media_name":media_name,"media_size":media_size,
                 "message_url":f"https://t.me/{username}/{msg.id}" if username else None,"search_text":msg.message or ""
             })

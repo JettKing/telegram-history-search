@@ -11,6 +11,8 @@ on:
 jobs:
   collect:
     runs-on: ubuntu-latest
+    # GitHub Actions cron is UTC; this schedule intentionally runs every 30 minutes.
+    # All persisted timestamps are normalized to UTC and rendered as Asia/Shanghai in the UI.
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
