@@ -9,7 +9,9 @@ CREATE TABLE IF NOT EXISTS channels (
   last_synced_at TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  owner_auth_code_id INTEGER
+  owner_auth_code_id INTEGER,
+  deleted_at TEXT,
+  purge_status TEXT NOT NULL DEFAULT 'active'
 );
 CREATE INDEX IF NOT EXISTS idx_channels_enabled ON channels(enabled);
 

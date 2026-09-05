@@ -30,6 +30,11 @@ async def main():
         if TARGET_CHANNEL:
             channels=[c for c in channels if (c.get("username") or "").lstrip("@")==TARGET_CHANNEL or str(c.get("telegram_id"))==TARGET_CHANNEL]
         print(f"enabled channels: {len(channels)}" )
+        for _ in range(5):
+            pr=await http.post(f"{API_BASE_URL}/api/collector/purge",headers=auth())
+            pr.raise_for_status()
+            if not pr.json().get("processed"): break
+            print(f"[PURGE] removed {pr.json().get('processed')} messages; remaining {pr.json().get('remaining')}" )
         for channel in channels:
             try: await collect_channel(client,http,channel)
             except Exception as exc: print(f"[ERROR] {channel.get('username') or channel.get('telegram_id')}: {exc}")
