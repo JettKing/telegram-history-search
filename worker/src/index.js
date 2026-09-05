@@ -154,8 +154,9 @@ async function dispatchCollector(req,env){
 }
 async function retryRun(req,env,id){
   if(!(await requireAdmin(req,env)))return json({error:"unauthorized"},401);
-  const run=await env.DB.prepare("SELECT channel_id FROM collection_runs WHERE id=?").bind(id).first();
-  if(!run)return json({error:"not_found"},404);
+  await ensureOwnershipSchema(env);const superAdmin=await requireSuperAdmin(req,env);const session=superAdmin?null:await currentAdminSession(req,env);
+  const run=superAdmin?await env.DB.prepare("SELECT channel_id FROM collection_runs WHERE id=?").bind(id).first():await env.DB.prepare("SELECT cr.channel_id FROM collection_runs cr JOIN channels c ON c.telegram_id=cr.channel_id WHERE cr.id=? AND c.owner_auth_code_id=?").bind(id,session?.auth_code_id||0).first();
+  if(!run)return json({error:superAdmin?"not_found":"forbidden",message:superAdmin?undefined:"管理员只能重试自己频道的采集任务。"},superAdmin?404:403);
   const c=await env.DB.prepare("SELECT username,telegram_id FROM channels WHERE telegram_id=?").bind(String(run.channel_id)).first();
   return dispatchCollector(new Request(req.url,{method:"POST",headers:req.headers,body:JSON.stringify({target_channel:c?.username||c?.telegram_id||run.channel_id})}),env);
 }
@@ -173,9 +174,10 @@ async function adminClearRuns(req,env){
 }
 async function adminStats(req,env){if(!(await requireAdmin(req,env)))return json({error:"unauthorized"},401);const [m,c,e,l,r,p,v]=await Promise.all([env.DB.prepare("SELECT COUNT(*) count FROM messages").first(),env.DB.prepare("SELECT COUNT(*) count FROM channels").first(),env.DB.prepare("SELECT COUNT(*) count FROM channels WHERE enabled=1").first(),env.DB.prepare("SELECT MAX(published_at) published_at FROM messages").first(),env.DB.prepare("SELECT status,COUNT(*) count FROM collection_runs GROUP BY status").all(),env.DB.prepare("SELECT COUNT(*) count FROM messages WHERE media_type IS NOT NULL").first(),env.DB.prepare("SELECT media_type,COUNT(*) count FROM messages WHERE media_type IS NOT NULL GROUP BY media_type ORDER BY count DESC").all()]);return json({messages:Number(m?.count||0),channels:Number(c?.count||0),enabled_channels:Number(e?.count||0),last_published_at:l?.published_at||null,runs:r.results||[],media_messages:Number(p?.count||0),media_breakdown:v.results||[]});}
 async function adminProgress(req,env){
-  if(!(await requireAdmin(req,env)))return json({error:"unauthorized"},401);
-  const r=await env.DB.prepare(`SELECT cr.id,cr.channel_id,cr.status,cr.imported,cr.error,cr.started_at,cr.finished_at,c.username,c.title FROM collection_runs cr LEFT JOIN channels c ON c.telegram_id=cr.channel_id ORDER BY cr.started_at DESC LIMIT 12`).all();
-  return json({runs:r.results||[]});
+  if(!(await requireAdmin(req,env)))return json({error:"unauthorized"},401);await ensureOwnershipSchema(env);
+  const superAdmin=await requireSuperAdmin(req,env);const session=superAdmin?null:await currentAdminSession(req,env);
+  const sql=superAdmin?`SELECT cr.id,cr.channel_id,cr.status,cr.imported,cr.error,cr.started_at,cr.finished_at,c.username,c.title FROM collection_runs cr LEFT JOIN channels c ON c.telegram_id=cr.channel_id ORDER BY cr.started_at DESC LIMIT 12`:`SELECT cr.id,cr.channel_id,cr.status,cr.imported,cr.error,cr.started_at,cr.finished_at,c.username,c.title FROM collection_runs cr JOIN channels c ON c.telegram_id=cr.channel_id WHERE c.owner_auth_code_id=? ORDER BY cr.started_at DESC LIMIT 12`;
+  const r=superAdmin?await env.DB.prepare(sql).all():await env.DB.prepare(sql).bind(session?.auth_code_id||0).all();return json({runs:r.results||[]});
 }
 async function collectorChannels(req,env){if(!requireCollector(req,env))return json({error:"unauthorized"},401);return json({channels:(await channels(env,true)).map(x=>({telegram_id:x.telegram_id,username:x.username,title:x.title,last_message_id:x.last_message_id}))});}
 async function runStart(req,env){if(!requireCollector(req,env))return json({error:"unauthorized"},401);const b=await req.json();const r=await env.DB.prepare("INSERT INTO collection_runs(channel_id,status)VALUES(?,?)").bind(String(b.channel_id||""),"running").run();return json({ok:true,run_id:r.meta?.last_row_id||null});}
