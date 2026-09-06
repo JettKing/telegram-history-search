@@ -9,12 +9,13 @@ COLLECTOR = ROOT / "collector" / "collector.py"
 
 def load_dedupe_channels():
     tree = ast.parse(COLLECTOR.read_text(encoding="utf-8"))
-    function = next(
+    functions = [
         node for node in tree.body
-        if isinstance(node, ast.FunctionDef) and node.name == "dedupe_channels"
-    )
+        if isinstance(node, ast.FunctionDef)
+        and node.name in {"normalize_username", "dedupe_channels"}
+    ]
     namespace = {}
-    exec(compile(ast.Module(body=[function], type_ignores=[]), str(COLLECTOR), "exec"), namespace)
+    exec(compile(ast.Module(body=functions, type_ignores=[]), str(COLLECTOR), "exec"), namespace)
     return namespace["dedupe_channels"]
 
 
@@ -47,6 +48,15 @@ class CollectorDedupeTests(unittest.TestCase):
         ]
         result = self.dedupe(rows)
         self.assertEqual({row["telegram_id"] for row in result}, {"100", "200"})
+
+    def test_merges_usernames_that_only_differ_by_case_or_at_prefix(self):
+        rows = [
+            {"id": 1, "telegram_id": "100", "username": "@DemoChannel", "message_count": 1},
+            {"id": 2, "telegram_id": "200", "username": "demochannel", "message_count": 2},
+        ]
+        result = self.dedupe(rows)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["telegram_id"], "200")
 
     def test_ignores_rows_without_identity(self):
         rows = [{"id": 1, "telegram_id": "", "username": ""}, {"id": 2}]

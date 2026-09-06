@@ -4,13 +4,19 @@ import httpx
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
+
+def normalize_username(value):
+    """Return the one canonical form used for Telegram username comparisons."""
+    return str(value or "").strip().lstrip("@").lower()
+
+
 API_ID=int(os.environ["TG_API_ID"])
 API_HASH=os.environ["TG_API_HASH"]
 SESSION=os.environ["TG_SESSION"]
 API_BASE_URL=os.environ["API_BASE_URL"].rstrip("/")
 TOKEN=os.environ["COLLECTOR_TOKEN"]
 BATCH_SIZE=int(os.environ.get("BATCH_SIZE","250"))
-TARGET_CHANNEL=os.environ.get("TARGET_CHANNEL","").strip().lstrip("@")
+TARGET_CHANNEL=normalize_username(os.environ.get("TARGET_CHANNEL",""))
 
 def auth(): return {"Authorization":f"Bearer {TOKEN}"}
 
@@ -23,7 +29,7 @@ def dedupe_channels(channels):
     """
     chosen={}
     for channel in channels:
-        key=(channel.get("username") or "").lstrip("@") or str(channel.get("telegram_id") or "")
+        key=normalize_username(channel.get("username")) or str(channel.get("telegram_id") or "")
         if not key: continue
         previous=chosen.get(key)
         score=lambda x:(int(x.get("message_count") or 0),int(x.get("last_message_id") or 0),int(x.get("id") or 0))
@@ -44,7 +50,7 @@ async def main():
         r=await http.get(f"{API_BASE_URL}/api/collector/channels",headers=auth());r.raise_for_status()
         channels=dedupe_channels(r.json().get("channels",[]))
         if TARGET_CHANNEL:
-            channels=[c for c in channels if (c.get("username") or "").lstrip("@")==TARGET_CHANNEL or str(c.get("telegram_id"))==TARGET_CHANNEL]
+            channels=[c for c in channels if normalize_username(c.get("username"))==TARGET_CHANNEL or str(c.get("telegram_id"))==TARGET_CHANNEL]
         print(f"enabled channels: {len(channels)}" )
         for _ in range(5):
             try:
@@ -63,7 +69,7 @@ async def main():
 async def collect_channel(client,http,channel):
     ref=channel.get("username") or channel.get("telegram_id")
     entity=await client.get_entity(ref)
-    username=getattr(entity,"username",None) or channel.get("username") or ""
+    username=normalize_username(getattr(entity,"username",None) or channel.get("username") or "")
     title=getattr(entity,"title",None) or channel.get("title") or username
     last_id=int(channel.get("last_message_id") or 0)
     run_id=None; imported=0
