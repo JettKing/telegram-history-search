@@ -11,3 +11,6 @@
 /* Align real result cards with the skeleton geometry */
 .result-info{margin:12px 0 13px}.skeleton-pill{display:none}.skeleton-resource{height:38px;margin:-2px 0 12px;background:#f7fbfe;border:1px solid #e5f1f8;border-radius:10px}.resource-meta{min-height:38px;margin:-2px 0 12px}
 .skeleton-card{min-height:295px}
+
+/* Restore original media placement: time + media badge on the same row */
+.skeleton-pill{display:block}.skeleton-card{min-height:0}
