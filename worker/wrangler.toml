@@ -1,6 +1,6 @@
 name = "tg-history-search"
 main = "src/index.js"
-compatibility_date = "2026-09-01"
+compatibility_date = "2026-09-05"
 
 [vars]
 # Set secrets in Cloudflare, not in this file:
