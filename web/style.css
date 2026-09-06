@@ -14,3 +14,5 @@
 
 /* Restore original media placement: time + media badge on the same row */
 .skeleton-pill{display:block}.skeleton-card{min-height:0}
+
+@media(max-width:375px){.search button{padding-left:14px;padding-right:14px}}
