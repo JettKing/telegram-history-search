@@ -14,6 +14,22 @@ TARGET_CHANNEL=os.environ.get("TARGET_CHANNEL","").strip().lstrip("@")
 
 def auth(): return {"Authorization":f"Bearer {TOKEN}"}
 
+def dedupe_channels(channels):
+    """Keep one logical channel when legacy username and numeric-ID rows coexist.
+
+    Prefer the row with the greatest synced message count/ID so an empty legacy
+    row cannot trigger a second full import. This only affects the collector's
+    work list; it never deletes database rows or messages.
+    """
+    chosen={}
+    for channel in channels:
+        key=(channel.get("username") or "").lstrip("@") or str(channel.get("telegram_id") or "")
+        if not key: continue
+        previous=chosen.get(key)
+        score=lambda x:(int(x.get("message_count") or 0),int(x.get("last_message_id") or 0),int(x.get("id") or 0))
+        if previous is None or score(channel)>score(previous): chosen[key]=channel
+    return list(chosen.values())
+
 def utc_iso(value):
     if value is None:
         return None
@@ -26,7 +42,7 @@ async def main():
     await client.start()
     async with httpx.AsyncClient(timeout=90) as http:
         r=await http.get(f"{API_BASE_URL}/api/collector/channels",headers=auth());r.raise_for_status()
-        channels=r.json().get("channels",[])
+        channels=dedupe_channels(r.json().get("channels",[]))
         if TARGET_CHANNEL:
             channels=[c for c in channels if (c.get("username") or "").lstrip("@")==TARGET_CHANNEL or str(c.get("telegram_id"))==TARGET_CHANNEL]
         print(f"enabled channels: {len(channels)}" )
