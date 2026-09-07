@@ -22,7 +22,11 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          sparse-checkout: worker
+          sparse-checkout-cone-mode: true
 
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v4
