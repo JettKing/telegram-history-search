@@ -7,11 +7,9 @@ const JSON_HEADERS = {
   "cache-control": "no-store"
 };
 
-// The production frontend is hosted at tgso.xph.asia. Keep the default
-// GitHub Pages hostname during the migration window for older links/caches.
+// The production frontend is hosted exclusively at tgso.xph.asia.
 const ALLOWED_CORS_ORIGINS = new Set([
-  "https://tgso.xph.asia",
-  "https://jettking.github.io"
+  "https://tgso.xph.asia"
 ]);
 
 function getCorsOrigin(req){
