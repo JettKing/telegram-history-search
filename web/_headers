@@ -1,0 +1,26 @@
+# HTML entry points: keep deployments visible quickly.
+/
+  Cache-Control: public, max-age=60, stale-while-revalidate=300
+
+/*.html
+  Cache-Control: public, max-age=60, stale-while-revalidate=300
+
+# Fingerprinted/query-versioned assets can be reused globally for one day.
+/*.css
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/*.js
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/*.png
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/*.jpg
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/*.jpeg
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/*.webp
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/*.svg
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/*.ico
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/*.woff2
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
