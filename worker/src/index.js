@@ -332,6 +332,11 @@ body{background:radial-gradient(circle at 78% 2%,#dff2ff 0,#f5faff 34%,#fff 78%)
 @media(max-width:1000px){.main{padding:20px 16px 88px}.hero{padding:20px;border-radius:18px}.stats{grid-template-columns:repeat(2,1fr)}.section-grid{grid-template-columns:1fr}.form,.code-form{grid-template-columns:1fr 1fr}.form .btn,.code-form .btn{grid-column:1/-1}}
 @media(max-width:620px){.top{align-items:flex-start}.title{font-size:22px}.hero{align-items:flex-start}.hero-mark{width:58px;height:58px;border-radius:17px;font-size:28px}.stats{grid-template-columns:1fr 1fr;gap:9px}.stat{padding:14px}.stat-value{font-size:24px}.form,.code-form{grid-template-columns:1fr}.form .btn,.code-form .btn{grid-column:auto}.panel{padding:16px}.row{grid-template-columns:1fr;gap:10px}.actions{justify-content:flex-start}.breakdown{grid-template-columns:1fr}.searchbar{flex-wrap:wrap}.searchbar input{min-width:0;width:100%}}
 @media(prefers-reduced-motion:reduce){.btn{transition:none}}
+/* Admin action button refinement: visual-only, no behavior changes. */
+#logoutBtn{background:#fff1f2;border-color:#ffd6da;color:#d54e5a;box-shadow:none}
+#logoutBtn:hover{background:#ffe5e8;border-color:#ffbfc6;color:#c83f4c}
+.btn.soft.small{background:#2d91f4;border-color:#2d91f4;color:#fff;box-shadow:0 7px 16px #2d91f42c}
+.btn.soft.small:hover{background:#1f7edc;border-color:#1f7edc;color:#fff}
 </style><style>.sidebar{background:#102a43;border-right:0;color:#dcecff}.brand-title{color:#fff}.brand-sub,.side-foot{color:#91abc2}.brand-icon{box-shadow:0 10px 24px rgba(35,141,242,.32)}.nav button{color:#a9c0d4}.nav button:hover,.nav button.active{background:rgba(66,157,241,.18);color:#fff}.main{padding:34px 42px 70px}.topbar{margin-bottom:26px}.eyebrow{color:#7d96aa;font-weight:800;letter-spacing:1.6px}.page-title{font-size:30px;color:#102a43}.status-dot{background:#eaf8f2;border-color:#cfeedd}.hero{padding:30px 32px;border:0;border-radius:22px;background:linear-gradient(120deg,#0f3354 0%,#185f91 58%,#2d9bf3 100%);box-shadow:0 18px 38px rgba(16,62,99,.18);color:#fff}.hero h2{font-size:24px;color:#fff}.hero p,.hero-meta{color:#c6e1f4}.hero-mark{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.18);color:#fff;box-shadow:none}.stat{border:0;border-radius:16px;padding:20px 21px;box-shadow:0 10px 30px rgba(32,87,126,.08);transition:transform .18s,box-shadow .18s}.stat:hover{transform:translateY(-2px);box-shadow:0 15px 32px rgba(32,87,126,.13)}.stat-icon{background:#e9f4ff}.stat-value{color:#102a43}.panel{border:0;border-radius:16px;box-shadow:0 10px 30px rgba(32,87,126,.07);padding:22px}.panel-title{color:#173b58}.panel-sub{color:#8499aa}.field input,.searchbar input,.code-form input{background:#fbfdff;border-color:#d7e5ef;border-radius:11px}.btn{transition:transform .16s,box-shadow .16s}.btn.primary{background:linear-gradient(135deg,#278ff4,#1776d8);box-shadow:0 8px 18px rgba(35,141,242,.18)}.btn.primary:hover{transform:translateY(-1px)}.btn.soft{background:#edf6ff;border-color:#d7e9f9}.rows{border-top-color:#edf2f6}.row{padding:16px 0;border-bottom-color:#edf2f6}.row-title{color:#183d59}.row-meta{color:#8a9eae}.mobile-nav{box-shadow:0 16px 36px rgba(20,63,101,.18)}@media(max-width:1000px){.main{padding:24px 18px 90px}}@media(max-width:620px){.main{padding:18px 12px 88px}.hero{padding:24px 20px}.card{padding:32px 24px 26px}}</style>
 </head>
 <body>
@@ -351,7 +356,7 @@ body{background:radial-gradient(circle at 78% 2%,#dff2ff 0,#f5faff 34%,#fff 78%)
 <main class="main">
   <div class="topbar">
     <div><div class="eyebrow">ADMINISTRATION</div><h1 class="page-title">管理后台</h1></div>
-    <div class="top-actions"><span class="status-dot"><i></i>服务运行中</span><button class="btn" onclick="refreshAll()">↻ 刷新</button><button type="button" id="logoutBtn" class="btn" onclick="logoutAdmin();return false">退出</button></div>
+    <div class="top-actions"><span class="status-dot"><i></i>服务运行中</span><button class="btn" onclick="refreshAll()">刷新</button><button type="button" id="logoutBtn" class="btn" onclick="logoutAdmin();return false">退出</button></div>
   </div>
   <div class="container">
     <section id="overview" class="hero">
