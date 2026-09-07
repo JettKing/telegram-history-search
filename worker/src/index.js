@@ -418,7 +418,6 @@ button,input{appearance:none;-webkit-appearance:none;-webkit-tap-highlight-color
       <section id="logs" class="panel"><div class="panel-head"><div><h2 class="panel-title">最近采集日志</h2><div class="panel-sub">GitHub Actions / Telethon</div></div><button class="btn danger small" onclick="clearRuns()">清空</button></div><div class="tabs"><button id="tabRuns" class="tab active" onclick="showTab('runs')">最近任务</button></div><div id="runsPane">加载中…</div></section>
       <section id="media" class="panel"><div class="panel-head"><div><h2 class="panel-title">媒体统计</h2><div class="panel-sub">数据库中已识别的媒体内容</div></div></div><div id="break" class="breakdown">加载中…</div></section>
     </section>
-    <div class="footer-note">频道历史检索 · V1.3 · 管理员控制台</div>
   </div>
 </main>
 </div>
