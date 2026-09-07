@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'worker/**'
+      - 'web/**'
       - '.github/workflows/worker.yml'
   workflow_dispatch:
 
