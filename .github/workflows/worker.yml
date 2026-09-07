@@ -25,7 +25,9 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 1
-          sparse-checkout: worker
+          sparse-checkout: |
+            worker
+            web
           sparse-checkout-cone-mode: true
 
       - name: Deploy to Cloudflare Workers

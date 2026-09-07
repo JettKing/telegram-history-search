@@ -2,6 +2,10 @@ name = "tg-history-search"
 main = "src/index.js"
 compatibility_date = "2026-09-05"
 
+[assets]
+directory = "../web"
+binding = "ASSETS"
+
 [vars]
 # Set secrets in Cloudflare, not in this file:
 # BOT_TOKEN, ADMIN_TOKEN, COLLECTOR_TOKEN, ADD_CHANNEL_CODE

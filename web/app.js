@@ -1,4 +1,4 @@
-const API_BASE=localStorage.getItem('API_BASE_URL')||'https://api-tg-history-search.xph.asia';let offset=0,pageSize=10,requestSeq=0,activeRequest=null;const $=s=>document.querySelector(s);
+const API_BASE='';let offset=0,pageSize=10,requestSeq=0,activeRequest=null;const $=s=>document.querySelector(s);
 async function loadChannels(){try{const r=await fetch(`${API_BASE}/api/channels`),d=await r.json();$('#channelList').innerHTML=(d.channels||[]).map(x=>`<option value="${escAttr(x.username||'')}">${escapeHtml(x.title||x.username||'')}</option>`).join('')}catch(_){} }
 function hasFilters(){return Boolean($('#q').value.trim()||$('#channel').value.trim()||$('#from').value||$('#to').value)}
 function syncClearButton(){$('#clearFilters').hidden=!hasFilters()}
