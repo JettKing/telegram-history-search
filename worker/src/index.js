@@ -180,6 +180,17 @@ h1{font-size:clamp(26px,6vw,30px);letter-spacing:-.6px;color:#102a43}p{color:#66
 .back{position:fixed;top:15px;right:max(22px,calc((100vw - 1180px)/2 + 22px))}
 @media(max-width:760px){.back{top:11px;right:22px}}
 @media(prefers-reduced-motion:reduce){.btn,.back{transition:none}}
+/* Telegram WebView normalization: visual-only responsive safeguards. */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;min-height:100%;scroll-behavior:smooth}
+body{min-height:100vh;min-height:100dvh;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+button,a{appearance:none;-webkit-appearance:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.field input{font-size:16px}
+.nav-add,.back{box-sizing:border-box;width:92px;height:42px;min-height:42px;padding:0;border:1px solid #2d91f4;border-radius:10px;background:#2d91f4;color:#fff;font-size:14px;font-weight:700;line-height:1;white-space:nowrap;box-shadow:0 6px 16px #2d91f42b}
+.btn{border-radius:12px;background:#2d91f4;box-shadow:0 7px 16px #2d91f42c}
+.back{position:fixed;top:calc(15px + env(safe-area-inset-top));right:max(22px,calc((100vw - 1180px)/2 + 22px));transition:background .2s ease,transform .2s ease}
+.back:hover{background:#1f7edc;border-color:#1f7edc;transform:translateY(-1px)}
+@media(max-width:760px){.back{top:calc(11px + env(safe-area-inset-top));right:max(22px,env(safe-area-inset-right))}}
+@media(prefers-reduced-motion:reduce){.back{transition:none}}
 </style></head><body><main><a class="back" href="/">返回首页</a><div class="brand"><div class="logo">➤</div><h1>提交频道</h1><p>使用有效授权码添加可检索的 Telegram 频道。</p></div><div class="notice"><strong>频道提交说明</strong><p>频道添加需使用付费授权码，以确保内容质量。</p><p>购买授权码后，填写授权码即可提交频道审核。</p><p class="notice-guide">暂无授权码？请先购买后再继续。</p><a class="purchase-link" href="https://t.me/xph_scbot" target="_blank" rel="noopener noreferrer">购买授权码</a></div><div class="panel"><div class="field"><label>频道</label><input id="channel" placeholder="@username 或 t.me/username" autocomplete="off"></div><div class="field"><label>授权码</label><input id="code" placeholder="请输入购买后获得的授权码" autocomplete="off" spellcheck="false"></div><button class="btn" onclick="submitChannel()">验证并添加</button><div id="msg" class="msg"></div></div></main><script>const $=s=>document.querySelector(s);const clean=s=>String(s||'').trim();async function submitChannel(){const button=document.querySelector('.btn');const username=clean($('#channel').value),auth_code=clean($('#code').value);button.disabled=true;$('#msg').textContent='正在验证…';try{const r=await fetch('/api/public/channels',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username,auth_code})});const d=await r.json();$('#msg').textContent=r.ok?(d.message||'频道添加成功。'):(d.message||d.error||'添加失败。');if(r.ok){$('#msg').textContent='验证并添加成功，正在进入管理员后台…';setTimeout(()=>location.href='/admin',700);}}catch(e){$('#msg').textContent='网络错误，请稍后重试。'}finally{button.disabled=false}}</script></body></html>`;
 
 async function ensureOwnershipSchema(env){
