@@ -6,6 +6,9 @@ compatibility_date = "2026-09-05"
 directory = "../web"
 binding = "ASSETS"
 
+[cache]
+enabled = true
+
 [vars]
 # Set secrets in Cloudflare, not in this file:
 # BOT_TOKEN, ADMIN_TOKEN, COLLECTOR_TOKEN, ADD_CHANNEL_CODE

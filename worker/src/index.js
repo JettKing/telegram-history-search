@@ -27,6 +27,31 @@ function applyCors(req,response){
   else headers.delete("Access-Control-Allow-Origin");
   return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }
+
+function applyCachePolicy(req,response){
+  const headers=new Headers(response.headers);
+  const url=new URL(req.url);
+  const path=url.pathname;
+
+  // Only GET/HEAD responses can be cached. All writes and auth-bearing
+  // routes remain no-store, including admin, collector, webhook and submit.
+  if(req.method!=="GET"&&req.method!=="HEAD") return response;
+  if(path.startsWith("/api/admin/")||path.startsWith("/api/collector/")||path==="/api/ingest"||path==="/bot/webhook"||path==="/submit"||path.startsWith("/admin")){
+    headers.set("Cache-Control","no-store");
+    return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
+  }
+
+  // Public D1-backed reads: short edge TTLs keep global latency low while
+  // bounding staleness after the 30-minute collector runs.
+  if(path==="/api/stats") headers.set("Cache-Control","public, max-age=30, stale-while-revalidate=30");
+  else if(path==="/api/channels") headers.set("Cache-Control","public, max-age=60, stale-while-revalidate=60");
+  else if(path==="/api/latest") headers.set("Cache-Control","public, max-age=30, stale-while-revalidate=30");
+  else if(path==="/api/search") headers.set("Cache-Control","public, max-age=60, stale-while-revalidate=60");
+  else if(path==="/"||path.endsWith(".html")) headers.set("Cache-Control","public, max-age=60, stale-while-revalidate=300");
+  else if(/\.(?:css|js|png|jpg|jpeg|gif|webp|svg|ico|woff2?)$/i.test(path)) headers.set("Cache-Control","public, max-age=86400, stale-while-revalidate=604800");
+
+  return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
+}
 const AUTH_FAILURES = new Map();
 function authClientKey(req){return req.headers.get("CF-Connecting-IP")||req.headers.get("x-forwarded-for")?.split(",")[0].trim()||"unknown";}
 function authBlocked(req){const x=AUTH_FAILURES.get(authClientKey(req));if(!x)return 0;const now=Date.now();if(now-x.first>10*60*1000){AUTH_FAILURES.delete(authClientKey(req));return 0;}return x.blockedUntil>now?Math.ceil((x.blockedUntil-now)/1000):0;}
@@ -392,4 +417,4 @@ refreshAll();
 </html>`;
 async function handleRequest(req,env){if(req.method==="OPTIONS")return new Response(null,{status:204,headers:JSON_HEADERS});const u=new URL(req.url);try{if(req.method==="GET"&&u.pathname==="/")return env.ASSETS.fetch(req);if(req.method==="POST"&&u.pathname==="/bot/webhook")return handleWebhook(req,env);if(req.method==="GET"&&u.pathname==="/api/search")return apiSearch(req,env);if(req.method==="GET"&&u.pathname==="/api/latest")return apiLatest(req,env);if(req.method==="GET"&&u.pathname==="/api/channels")return apiChannels(req,env);if(req.method==="POST"&&u.pathname==="/api/public/channels")return publicAddChannel(req,env);if(u.pathname==="/api/admin/channels"&&["GET","POST"].includes(req.method))return adminChannels(req,env);if(u.pathname==="/api/admin/auth-codes"&&["GET","POST"].includes(req.method))return adminAuthCodes(req,env);if(u.pathname.startsWith("/api/admin/auth-codes/")&&["PATCH","DELETE"].includes(req.method))return adminAuthCode(req,env,u.pathname.split("/").pop());if(u.pathname.startsWith("/api/admin/channels/")&&["PATCH","DELETE"].includes(req.method))return adminChannel(req,env,u.pathname.split("/").pop());if(req.method==="POST"&&u.pathname==="/api/admin/code-login")return adminCodeLogin(req,env);if(req.method==="POST"&&u.pathname==="/api/admin/set-webhook")return adminSetWebhook(req,env);if(req.method==="GET"&&u.pathname==="/api/admin/session"){const wait=authBlocked(req);if(wait)return json({error:"too_many_attempts",message:"登录尝试过多，请稍后再试。"},429,{"retry-after":String(wait)});const role=await adminRole(req,env);if(!role){authFailure(req);return json({error:"unauthorized"},401);}authSuccess(req);const ss=role==="super_admin"?null:await currentAdminSession(req,env);return json({ok:true,role,auth_code_id:ss?.auth_code_id||null,expires_at:ss?.expires_at||null});}if(req.method==="GET"&&u.pathname==="/api/admin/audit")return adminAudit(req,env);if(req.method==="GET"&&u.pathname==="/api/admin/stats")return adminStats(req,env);if(req.method==="POST"&&u.pathname==="/api/admin/logout")return adminLogout(req,env);if(u.pathname==="/api/admin/runs"&&req.method==="DELETE")return adminClearRuns(req,env);if(req.method==="GET"&&u.pathname==="/api/admin/runs")return adminRuns(req,env);if(req.method==="POST"&&u.pathname==="/api/admin/sync")return dispatchCollector(req,env);if(req.method==="POST"&&u.pathname.startsWith("/api/admin/runs/")&&u.pathname.endsWith("/retry"))return retryRun(req,env,u.pathname.split("/")[4]);if(req.method==="GET"&&u.pathname==="/api/admin/progress")return adminProgress(req,env);if(req.method==="GET"&&u.pathname==="/api/collector/channels")return collectorChannels(req,env);if(req.method==="POST"&&u.pathname==="/api/collector/purge")return purgeDeleted(req,env);if(req.method==="POST"&&u.pathname==="/api/collector/run/start")return runStart(req,env);if(req.method==="POST"&&u.pathname==="/api/collector/run/finish")return runFinish(req,env);if(req.method==="POST"&&u.pathname==="/api/ingest")return ingest(req,env);if(req.method==="GET"&&u.pathname==="/api/stats"){const m=await env.DB.prepare("SELECT COUNT(*) count FROM messages").first();const c=await env.DB.prepare("SELECT COUNT(*) count FROM channels WHERE enabled=1").first();return json({messages:Number(m?.count||0),channels:Number(c?.count||0)});}if(req.method==="GET"&&u.pathname==="/admin/login")return html(LOGIN_HTML);if(req.method==="GET"&&u.pathname==="/admin/auth")return Response.redirect(new URL('/admin',u),302);if(req.method==="GET"&&u.pathname==="/admin")return html(ADMIN_HTML);if(req.method==="GET"&&u.pathname==="/submit")return html(SUBMIT_HTML);if(req.method==="GET"&&!u.pathname.startsWith("/api/")&&u.pathname!=="/bot/webhook")return env.ASSETS.fetch(req);return json({name:"Telegram History Search",version:"1.0.0",ok:true});}catch(e){return json({error:"internal_error",message:e?.message||String(e)},500);}}
 
-export default {async fetch(req,env){const response=await handleRequest(req,env);return applyCors(req,response);}};
+export default {async fetch(req,env){const response=await handleRequest(req,env);return applyCors(req,applyCachePolicy(req,response));}};
