@@ -386,7 +386,7 @@ button,input{appearance:none;-webkit-appearance:none;-webkit-tap-highlight-color
 .audit-footer>div{display:flex;gap:8px}
 .audit-footer .btn:disabled{opacity:.45;cursor:not-allowed}
 #runsPane .row{padding:10px 0}
-@media(max-width:620px){#runsPane .row{padding:10px 0}}
+@media(max-width:620px){#runsPane .row{padding:10px 0;grid-template-columns:minmax(0,1fr) auto;align-items:center}#runsPane .actions{justify-content:flex-end}}
 /* Keep all long admin lists visually consistent across desktop and mobile. */
 #runsPane,#channelsPane,#codesPane,.audit-scroll{max-height:520px}
 @media(max-width:620px){#runsPane,#channelsPane,#codesPane,.audit-scroll{max-height:clamp(260px,45vh,380px)}}
