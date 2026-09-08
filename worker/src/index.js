@@ -34,7 +34,7 @@ function applyCachePolicy(req,response){
   // Only GET/HEAD responses can be cached. All writes and auth-bearing
   // routes remain no-store, including admin, collector, webhook and submit.
   if(req.method!=="GET"&&req.method!=="HEAD") return response;
-  if(path.startsWith("/api/admin/")||path.startsWith("/api/collector/")||path==="/api/ingest"||path==="/bot/webhook"||path==="/submit"||path.startsWith("/admin")){
+  if(path.startsWith("/api/admin/")||path.startsWith("/api/collector/")||path==="/api/ingest"||path==="/bot/webhook"){
     headers.set("Cache-Control","no-store");
     return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
   }
@@ -45,6 +45,7 @@ function applyCachePolicy(req,response){
   else if(path==="/api/channels") headers.set("Cache-Control","public, max-age=60, stale-while-revalidate=60");
   else if(path==="/api/latest") headers.set("Cache-Control","public, max-age=30, stale-while-revalidate=30");
   else if(path==="/api/search") headers.set("Cache-Control","public, max-age=60, stale-while-revalidate=60");
+  else if(path==="/admin"||path==="/admin/login"||path==="/submit") headers.set("Cache-Control","public, max-age=60, stale-while-revalidate=300");
   else if(path==="/"||path.endsWith(".html")) headers.set("Cache-Control","public, max-age=60, stale-while-revalidate=300");
   else if(/\.(?:css|js|png|jpg|jpeg|gif|webp|svg|ico|woff2?)$/i.test(path)) headers.set("Cache-Control","public, max-age=86400, stale-while-revalidate=604800");
 
