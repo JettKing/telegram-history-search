@@ -34,6 +34,11 @@ def normalize_username(value):
     return str(value or "").strip().lstrip("@").lower()
 
 
+def normalize_channel_id(value):
+    value = str(value or "").strip()
+    return value[4:] if value.startswith("-100") else value
+
+
 def dedupe_channels(channels):
     """Keep one logical channel when legacy username and numeric-ID rows coexist."""
     chosen = {}
@@ -86,7 +91,7 @@ async def main():
             response.raise_for_status()
             channels = dedupe_channels(response.json().get("channels", []))
             if TARGET_CHANNEL:
-                channels = [channel for channel in channels if normalize_username(channel.get("username")) == TARGET_CHANNEL or str(channel.get("telegram_id")) == TARGET_CHANNEL]
+                channels = [channel for channel in channels if normalize_username(channel.get("username")) == TARGET_CHANNEL or normalize_channel_id(channel.get("telegram_id")) == normalize_channel_id(TARGET_CHANNEL)]
             summary["channel_count"] = len(channels)
             print(f"enabled channels: {len(channels)}")
             for _ in range(5):
