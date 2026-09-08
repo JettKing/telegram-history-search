@@ -383,6 +383,7 @@ button,input{appearance:none;-webkit-appearance:none;-webkit-tap-highlight-color
 .audit-scroll{max-height:420px;overflow-y:auto;overflow-x:hidden;padding-right:6px;overscroll-behavior:contain}
 .audit-scroll table{min-width:680px}
 .audit-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid #edf2f6;color:#8499aa;font-size:11px}
+.audit-footer>div{display:flex;gap:8px}
 .audit-footer .btn:disabled{opacity:.45;cursor:not-allowed}
 /* Keep all long admin lists visually consistent across desktop and mobile. */
 #runsPane,#channelsPane,#codesPane,.audit-scroll{max-height:520px}
