@@ -7,19 +7,22 @@ const JSON_HEADERS = {
   "cache-control": "no-store"
 };
 
-// The production frontend is hosted exclusively at tgso.xph.asia.
-const ALLOWED_CORS_ORIGINS = new Set([
-  "https://tgso.xph.asia"
-]);
-
-function getCorsOrigin(req){
+// Same-origin requests must keep working when the production domain changes.
+// Optional cross-origin callers can be configured with a comma-separated
+// CORS_ORIGINS Worker variable (for example, "https://admin.example.com").
+function getCorsOrigin(req,env){
   const origin=req.headers.get("Origin")||"";
-  return ALLOWED_CORS_ORIGINS.has(origin)?origin:"";
+  if(!origin)return "";
+  try{
+    if(origin===new URL(req.url).origin)return origin;
+  }catch(_){return "";}
+  const configured=String(env?.CORS_ORIGINS||"").split(",").map(v=>v.trim()).filter(Boolean);
+  return configured.includes(origin)?origin:"";
 }
 
-function applyCors(req,response){
+function applyCors(req,env,response){
   const headers=new Headers(response.headers);
-  const origin=getCorsOrigin(req);
+  const origin=getCorsOrigin(req,env);
   headers.set("Vary","Origin");
   if(origin) headers.set("Access-Control-Allow-Origin",origin);
   else headers.delete("Access-Control-Allow-Origin");
@@ -493,4 +496,4 @@ refreshAll();
 </html>`;
 async function handleRequest(req,env){if(req.method==="OPTIONS")return new Response(null,{status:204,headers:JSON_HEADERS});const u=new URL(req.url);try{if(req.method==="GET"&&u.pathname==="/")return env.ASSETS.fetch(req);if(req.method==="POST"&&u.pathname==="/bot/webhook")return handleWebhook(req,env);if(req.method==="GET"&&u.pathname==="/api/search")return apiSearch(req,env);if(req.method==="GET"&&u.pathname==="/api/latest")return apiLatest(req,env);if(req.method==="GET"&&u.pathname==="/api/channels")return apiChannels(req,env);if(req.method==="POST"&&u.pathname==="/api/public/channels")return publicAddChannel(req,env);if(u.pathname==="/api/admin/channels"&&["GET","POST"].includes(req.method))return adminChannels(req,env);if(u.pathname==="/api/admin/auth-codes"&&["GET","POST"].includes(req.method))return adminAuthCodes(req,env);if(u.pathname.startsWith("/api/admin/auth-codes/")&&["PATCH","DELETE"].includes(req.method))return adminAuthCode(req,env,u.pathname.split("/").pop());if(u.pathname.startsWith("/api/admin/channels/")&&["PATCH","DELETE"].includes(req.method))return adminChannel(req,env,u.pathname.split("/").pop());if(req.method==="POST"&&u.pathname==="/api/admin/code-login")return adminCodeLogin(req,env);if(req.method==="POST"&&u.pathname==="/api/admin/set-webhook")return adminSetWebhook(req,env);if(req.method==="GET"&&u.pathname==="/api/admin/session"){const wait=authBlocked(req);if(wait)return json({error:"too_many_attempts",message:"登录尝试过多，请稍后再试。"},429,{"retry-after":String(wait)});const role=await adminRole(req,env);if(!role){authFailure(req);return json({error:"unauthorized"},401);}authSuccess(req);const ss=role==="super_admin"?null:await currentAdminSession(req,env);return json({ok:true,role,auth_code_id:ss?.auth_code_id||null,expires_at:ss?.expires_at||null});}if(req.method==="GET"&&u.pathname==="/api/admin/audit")return adminAudit(req,env);if(req.method==="GET"&&u.pathname==="/api/admin/stats")return adminStats(req,env);if(req.method==="POST"&&u.pathname==="/api/admin/logout")return adminLogout(req,env);if(u.pathname==="/api/admin/runs"&&req.method==="DELETE")return adminClearRuns(req,env);if(req.method==="GET"&&u.pathname==="/api/admin/runs")return adminRuns(req,env);if(req.method==="POST"&&u.pathname==="/api/admin/sync")return dispatchCollector(req,env);if(req.method==="POST"&&u.pathname.startsWith("/api/admin/runs/")&&u.pathname.endsWith("/retry"))return retryRun(req,env,u.pathname.split("/")[4]);if(req.method==="GET"&&u.pathname==="/api/admin/progress")return adminProgress(req,env);if(req.method==="GET"&&u.pathname==="/api/collector/channels")return collectorChannels(req,env);if(req.method==="POST"&&u.pathname==="/api/collector/purge")return purgeDeleted(req,env);if(req.method==="POST"&&u.pathname==="/api/collector/run/start")return runStart(req,env);if(req.method==="POST"&&u.pathname==="/api/collector/run/finish")return runFinish(req,env);if(req.method==="POST"&&u.pathname==="/api/ingest")return ingest(req,env);if(req.method==="GET"&&u.pathname==="/api/stats"){const m=await env.DB.prepare("SELECT COUNT(*) count FROM messages").first();const c=await env.DB.prepare("SELECT COUNT(*) count FROM channels WHERE enabled=1").first();return json({messages:Number(m?.count||0),channels:Number(c?.count||0)});}if(req.method==="GET"&&u.pathname==="/admin/login")return html(LOGIN_HTML);if(req.method==="GET"&&u.pathname==="/admin")return html(ADMIN_HTML);if(req.method==="GET"&&u.pathname==="/submit")return html(SUBMIT_HTML);if(req.method==="GET"&&!u.pathname.startsWith("/api/")&&u.pathname!=="/bot/webhook")return env.ASSETS.fetch(req);return json({name:"Telegram History Search",version:"1.0.0",ok:true});}catch(e){return json({error:"internal_error",message:e?.message||String(e)},500);}}
 
-export default {async fetch(req,env){const response=await handleRequest(req,env);return applyCors(req,applyCachePolicy(req,response));}};
+export default {async fetch(req,env){const response=await handleRequest(req,env);return applyCors(req,env,applyCachePolicy(req,response));}};
