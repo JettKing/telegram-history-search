@@ -11,7 +11,7 @@ from telethon.sessions import StringSession
 API_ID = int(os.environ["TG_API_ID"])
 API_HASH = os.environ["TG_API_HASH"]
 SESSION = os.environ["TG_SESSION"]
-API_BASE_URL = os.environ["WORKER_API_BASE_URL"].rstrip("/")
+API_BASE_URL = os.environ["WORKER_API_BASE_URL"].strip().rstrip("/")
 TOKEN = os.environ["WORKER_INGEST_TOKEN"]
 if not API_BASE_URL:
     raise RuntimeError("WORKER_API_BASE_URL is not configured")
