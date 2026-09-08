@@ -396,11 +396,11 @@ button,input{appearance:none;-webkit-appearance:none;-webkit-tap-highlight-color
 <main class="main">
   <div class="topbar">
     <div><div class="eyebrow">ADMINISTRATION</div><h1 class="page-title">控制台</h1></div>
-    <div class="top-actions"><span class="status-dot"><i></i>服务运行中</span><button class="btn soft" id="webhookBtn" onclick="setWebhook()" style="display:none">设置机器人 Webhook</button><button class="btn" onclick="refreshAll()">刷新</button><button type="button" id="logoutBtn" class="btn" onclick="logoutAdmin();return false">退出</button></div>
+    <div class="top-actions"><span class="status-dot"><i></i>服务运行中</span><button class="btn" onclick="refreshAll()">刷新</button><button type="button" id="logoutBtn" class="btn" onclick="logoutAdmin();return false">退出</button></div>
   </div>
   <div class="container">
     <section id="overview" class="hero">
-      <div><h2>欢迎回来，管理员</h2><p>管理可检索频道、执行同步任务，并查看系统运行状态。</p><div class="hero-meta" id="lastSync">最后刷新：—</div></div>
+      <div><h2>欢迎回来，管理员</h2><p>管理可检索频道、执行同步任务，并查看系统运行状态。</p><div class="hero-meta" id="lastSync">最后刷新：—</div><button class="btn soft small" id="webhookBtn" onclick="setWebhook()" style="display:none;margin-top:12px">设置机器人 Webhook</button></div>
       <div class="hero-mark">✈</div>
     </section>
     <section class="stats">
