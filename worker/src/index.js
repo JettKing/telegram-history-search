@@ -384,6 +384,9 @@ button,input{appearance:none;-webkit-appearance:none;-webkit-tap-highlight-color
 .audit-scroll table{min-width:680px}
 .audit-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid #edf2f6;color:#8499aa;font-size:11px}
 .audit-footer .btn:disabled{opacity:.45;cursor:not-allowed}
+/* Keep all long admin lists visually consistent across desktop and mobile. */
+#runsPane,#channelsPane,#codesPane,.audit-scroll{max-height:520px}
+@media(max-width:620px){#runsPane,#channelsPane,#codesPane,.audit-scroll{max-height:clamp(260px,45vh,380px)}}
 </style>
 <body>
 <div id="authPanel" style="display:none"><section class="panel" style="border:2px solid #b9defc"><div class="panel-head"><div><h2 class="panel-title">管理员登录</h2><div class="panel-sub">输入 ADMIN_TOKEN 后才能添加频道或执行同步。</div></div></div><div class="form"><div class="field"><input id="adminToken" type="password" placeholder="ADMIN_TOKEN" autocomplete="current-password"></div><button class="btn primary" onclick="loginAdmin()">登录后台</button></div><div id="authMsg" class="message"></div></section></div>
