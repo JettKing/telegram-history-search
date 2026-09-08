@@ -29,8 +29,8 @@ jobs:
           TG_API_ID: ${{ secrets.TG_API_ID }}
           TG_API_HASH: ${{ secrets.TG_API_HASH }}
           TG_SESSION: ${{ secrets.TG_SESSION }}
-          API_BASE_URL: ${{ secrets.API_BASE_URL }}
-          COLLECTOR_TOKEN: ${{ secrets.COLLECTOR_TOKEN }}
+          WORKER_API_BASE_URL: ${{ secrets.WORKER_API_BASE_URL }}
+          WORKER_INGEST_TOKEN: ${{ secrets.WORKER_INGEST_TOKEN }}
           BATCH_SIZE: 250
           TARGET_CHANNEL: ${{ inputs.target_channel }}
           MAX_CHANNEL_RETRIES: 2

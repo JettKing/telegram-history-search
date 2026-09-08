@@ -14,7 +14,10 @@ npx wrangler deploy
 在 Cloudflare Worker 中设置：
 - `BOT_TOKEN`
 - `ADMIN_TOKEN`
-- `COLLECTOR_TOKEN`
+- `WORKER_INGEST_TOKEN`
+- `GH_DISPATCH_TOKEN`
+- `GH_TARGET_REPOSITORY`
+- `GH_TARGET_REF`
 
 ## 3. Telegram Webhook
 将 `https://你的Worker域名/bot/webhook` 设置为 Bot webhook。
@@ -24,8 +27,8 @@ npx wrangler deploy
 - `TG_API_ID`
 - `TG_API_HASH`
 - `TG_SESSION`
-- `API_BASE_URL`
-- `COLLECTOR_TOKEN`
+- `WORKER_API_BASE_URL`
+- `WORKER_INGEST_TOKEN`
 
 ## 5. 首次采集
 打开 `/admin`，添加频道并保持启用，然后手动运行 GitHub Actions。之后每 30 分钟增量同步。

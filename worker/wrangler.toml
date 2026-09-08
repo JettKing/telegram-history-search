@@ -11,7 +11,7 @@ enabled = true
 
 [vars]
 # Set secrets in Cloudflare, not in this file:
-# BOT_TOKEN, ADMIN_TOKEN, COLLECTOR_TOKEN, ADD_CHANNEL_CODE
+# BOT_TOKEN, ADMIN_TOKEN, WORKER_INGEST_TOKEN, GH_DISPATCH_TOKEN, GH_TARGET_REPOSITORY, GH_TARGET_REF
 
 [[d1_databases]]
 binding = "DB"

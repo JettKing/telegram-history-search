@@ -196,9 +196,9 @@ npm install -g wrangler
 | 变量 | 用途 |
 | --- | --- |
 | `ADMIN_TOKEN` | 管理后台管理员身份验证 |
-| `GITHUB_TOKEN` | 管理后台触发 GitHub Actions |
-| `GITHUB_REPO` | GitHub 仓库，格式为 `owner/repository` |
-| `ADD_CHANNEL_CODE` | 兼容旧版固定授权码机制时使用 |
+| `GH_DISPATCH_TOKEN` | 管理后台触发 GitHub Actions |
+| `GH_TARGET_REPOSITORY` | GitHub 仓库，固定为 `JettKing/telegram-history-search` |
+| `GH_TARGET_REF` | GitHub 分支，固定为 `main` |
 
 ### GitHub Actions / Collector
 
@@ -206,11 +206,11 @@ npm install -g wrangler
 
 | 变量 | 用途 |
 | --- | --- |
-| `TELEGRAM_API_ID` | Telegram API ID |
-| `TELEGRAM_API_HASH` | Telegram API Hash |
-| `TELEGRAM_SESSION` | Telethon Session |
-| `WORKER_URL` | Cloudflare Worker API 地址 |
-| `COLLECTOR_TOKEN` | 采集器访问 Worker 的认证凭据 |
+| `TG_API_ID` | Telegram API ID |
+| `TG_API_HASH` | Telegram API Hash |
+| `TG_SESSION` | Telethon Session |
+| `WORKER_API_BASE_URL` | Cloudflare Worker API 地址 |
+| `WORKER_INGEST_TOKEN` | 采集器访问 Worker 的认证凭据 |
 
 具体变量名称应以仓库当前 `.github/workflows/collector.yml` 和 `collector/collector.py` 的实际配置为准。
 

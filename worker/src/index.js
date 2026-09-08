@@ -81,7 +81,7 @@ function authToken(req,name){return req.headers.get(name)||req.headers.get("auth
 async function adminRole(req,env){const token=authToken(req,"x-admin-token");if(env.ADMIN_TOKEN&&token===env.ADMIN_TOKEN)return "super_admin";if(!token)return "";try{await ensureSecuritySchema(env);const h=await sha256Hex(token);const r=await env.DB.prepare("SELECT s.role FROM auth_sessions s LEFT JOIN auth_codes c ON c.id=s.auth_code_id WHERE s.token_hash=? AND datetime(s.expires_at)>datetime('now') AND (s.role='super_admin' OR (s.role='admin' AND s.auth_code_id IS NOT NULL AND c.enabled=1 AND (c.expires_at IS NULL OR datetime(c.expires_at)>datetime('now')))) LIMIT 1").bind(h).first();if(r)return r.role||"admin";}catch(e){}return "";}
 async function requireAdmin(req,env){return Boolean(await adminRole(req,env));}
 async function requireSuperAdmin(req,env){return (await adminRole(req,env))==="super_admin";}
-function requireCollector(req,env){return Boolean(env.COLLECTOR_TOKEN&&authToken(req,"x-collector-token")===env.COLLECTOR_TOKEN);}
+function requireCollector(req,env){return Boolean(env.WORKER_INGEST_TOKEN&&authToken(req,"x-collector-token")===env.WORKER_INGEST_TOKEN);}
 async function tg(env,method,body){if(!env.BOT_TOKEN)throw new Error("BOT_TOKEN is not configured");const r=await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/${method}`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});return r.json();}
 function messageUrl(x){return x.message_url||"";}
 function resultText(x,i=0){const title=esc(x.channel_title|| (x.channel_username?`@${x.channel_username}`:"频道内容"));const body=esc(preview(x.text||`[${mediaLabel(x.media_type)}]`));const date=x.published_at?new Date(x.published_at).toLocaleString("zh-CN",{timeZone:"Asia/Shanghai"}):"未知时间";const url=messageUrl(x);const media=mediaBadge(x);return `<b>${i+1}. ${title}</b>\n${body}\n<code>${date}</code>${media}${url?`\n<a href="${esc(url)}">查看原文 →</a>`:""}`;}
@@ -267,12 +267,14 @@ async function adminChannel(req,env,id){
 }
 async function dispatchCollector(req,env){
   if(!(await requireAdmin(req,env)))return json({error:"unauthorized"},401);
-  if(!env.GITHUB_TOKEN||!env.GITHUB_REPO)return json({error:"github_dispatch_not_configured",message:"请配置 GITHUB_TOKEN 与 GITHUB_REPO（owner/repo）"},503);
+  if(!env.GH_DISPATCH_TOKEN||!env.GH_TARGET_REPOSITORY)return json({error:"github_dispatch_not_configured",message:"请配置 GitHub dispatch 凭据与目标仓库"},503);
   const b=await req.json().catch(()=>({}));
   const target=clean(b.target_channel||"").replace(/^@/ ,"");
   if(!(await requireSuperAdmin(req,env))){if(!target)return json({error:"forbidden",message:"管理员只能同步自己通过授权码添加的频道。"},403);await ensureOwnershipSchema(env);const session=await currentAdminSession(req,env);const own=await env.DB.prepare("SELECT id FROM channels WHERE (username=? OR telegram_id=?) AND owner_auth_code_id=? LIMIT 1").bind(target,target,session?.auth_code_id||0).first();if(!own)return json({error:"forbidden",message:"管理员只能同步自己通过授权码添加的频道。"},403);}
-  const ref=clean(b.ref||env.GITHUB_REF||"main")||"main";
-  const r=await fetch(`https://api.github.com/repos/${env.GITHUB_REPO}/actions/workflows/collector.yml/dispatches`,{method:"POST",headers:{Authorization:`Bearer ${env.GITHUB_TOKEN}`,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28","content-type":"application/json"},body:JSON.stringify({ref,inputs:{target_channel:target}})});
+  const repo=clean(env.GH_TARGET_REPOSITORY||"");
+  const ref=clean(env.GH_TARGET_REF||"");
+  if(repo!=="JettKing/telegram-history-search"||ref!=="main")return json({error:"github_dispatch_target_invalid"},503);
+  const r=await fetch(`https://api.github.com/repos/${repo}/actions/workflows/collector.yml/dispatches`,{method:"POST",headers:{Authorization:`Bearer ${env.GH_DISPATCH_TOKEN}`,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28","content-type":"application/json"},body:JSON.stringify({ref,inputs:{target_channel:target}})});
   if(!r.ok)return json({error:"github_dispatch_failed",status:r.status,detail:(await r.text()).slice(0,500)},502);
   await audit(req,env,"sync_channel","channel",target||null);return json({ok:true,target_channel:target||null,ref});
 }

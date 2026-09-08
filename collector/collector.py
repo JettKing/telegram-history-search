@@ -11,8 +11,12 @@ from telethon.sessions import StringSession
 API_ID = int(os.environ["TG_API_ID"])
 API_HASH = os.environ["TG_API_HASH"]
 SESSION = os.environ["TG_SESSION"]
-API_BASE_URL = os.environ["API_BASE_URL"].rstrip("/")
-TOKEN = os.environ["COLLECTOR_TOKEN"]
+API_BASE_URL = os.environ["WORKER_API_BASE_URL"].rstrip("/")
+TOKEN = os.environ["WORKER_INGEST_TOKEN"]
+if not API_BASE_URL:
+    raise RuntimeError("WORKER_API_BASE_URL is not configured")
+if not TOKEN:
+    raise RuntimeError("WORKER_INGEST_TOKEN is not configured")
 BATCH_SIZE = int(os.environ.get("BATCH_SIZE", "250"))
 TARGET_CHANNEL = os.environ.get("TARGET_CHANNEL", "").strip().lstrip("@").lower()
 MAX_CHANNEL_RETRIES = max(0, int(os.environ.get("MAX_CHANNEL_RETRIES", "2")))
