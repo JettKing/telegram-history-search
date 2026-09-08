@@ -63,6 +63,12 @@ const clean=(s="")=>String(s).trim().replace(/\s+/g," ");
 // Telegram usernames are case-insensitive. Store and compare one canonical form so
 // @Channel, @channel, and legacy records do not create separate logical channels.
 const normalizeUsername=(s="")=>clean(s).replace(/^@/,"").toLowerCase();
+function normalizeChannelInput(s=""){
+  return normalizeUsername(clean(s)
+    .replace(/^https?:\/\/t\.me\//i,"")
+    .replace(/^t\.me\//i,"")
+    .split("/")[0]);
+}
 const codeNormalize=(s="")=>String(s).trim();
 async function sha256Hex(value){const data=new TextEncoder().encode(value);const digest=await crypto.subtle.digest("SHA-256",data);return [...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,"0")).join("");}
 function randomCode(){const bytes=new Uint8Array(18);crypto.getRandomValues(bytes);return "XPH-"+[...bytes].map(b=>b.toString(16).padStart(2,"0")).join("").toUpperCase();}
@@ -129,7 +135,7 @@ async function publicAddChannel(req,env){
   if(req.method!=="POST")return json({error:"method_not_allowed"},405);
   await ensureOwnershipSchema(env);
   const b=await req.json().catch(()=>({}));
-  const username=normalizeUsername(clean(b.username||b.telegram_id||"").replace(/^https?:\/\/t\.me\//,"" ).replace(/\/$/,""));
+  const username=normalizeChannelInput(b.username||b.telegram_id||"");
   const code=codeNormalize(b.auth_code||"");
   if(!username)return json({error:"username_required",message:"请输入频道用户名。"},400);
   if(!/^[A-Za-z0-9_]{3,64}$/.test(username))return json({error:"invalid_username",message:"频道用户名格式不正确。"},400);
@@ -218,7 +224,7 @@ async function adminChannels(req,env){
   if(!(await requireSuperAdmin(req,env)))return json({error:"forbidden",message:"只有超级管理员可以添加频道。"},403);
   const b=await req.json().catch(()=>({}));
   // 管理后台已经通过 ADMIN_TOKEN 完成身份认证；管理员添加频道无需额外授权码。
-  const username=normalizeUsername(clean(b.username||b.telegram_id||"").replace(/^https?:\/\/t\.me\//,"" ).replace(/\/$/,""));
+  const username=normalizeChannelInput(b.username||b.telegram_id||"");
   if(!username)return json({error:"username_required"},400);
   if(!/^[A-Za-z0-9_]{3,64}$/.test(username))return json({error:"invalid_username",message:"频道用户名格式不正确。"},400);
   const known=await env.DB.prepare("SELECT id,deleted_at FROM channels WHERE username=? COLLATE NOCASE OR telegram_id=? LIMIT 1").bind(username,username).first();
