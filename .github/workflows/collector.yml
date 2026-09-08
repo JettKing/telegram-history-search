@@ -11,6 +11,9 @@ on:
 jobs:
   collect:
     runs-on: ubuntu-latest
+    concurrency:
+      group: telegram-collector-production
+      cancel-in-progress: false
     # GitHub Actions cron is UTC; this schedule intentionally runs every 30 minutes.
     # All persisted timestamps are normalized to UTC and rendered as Asia/Shanghai in the UI.
     timeout-minutes: 25
@@ -30,4 +33,49 @@ jobs:
           COLLECTOR_TOKEN: ${{ secrets.COLLECTOR_TOKEN }}
           BATCH_SIZE: 250
           TARGET_CHANNEL: ${{ inputs.target_channel }}
-        run: python collector/collector.py
+          MAX_CHANNEL_RETRIES: 2
+          RETRY_DELAY_SECONDS: 5
+          CHANNEL_WARN_SECONDS: 300
+          RUN_WARN_SECONDS: 900
+          COLLECTOR_SUMMARY_PATH: collector-summary.json
+        run: |
+          for attempt in 1 2 3; do
+            echo "Collector attempt ${attempt}/3"
+            if python collector/collector.py; then
+              exit 0
+            fi
+            if [ "${attempt}" -lt 3 ]; then
+              echo "::warning title=Collector retry::Whole collector run failed; retrying in 15 seconds"
+              sleep 15
+            fi
+          done
+          exit 1
+      - name: Publish collector summary and alerts
+        if: always()
+        run: |
+          if [ -f collector-summary.json ]; then
+            duration=$(jq -r '.duration_seconds // 0' collector-summary.json)
+            failed=$(jq -r '.failed_channels // 0' collector-summary.json)
+            imported=$(jq -r '.total_imported // 0' collector-summary.json)
+            echo "## Collector run" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Duration: ${duration}s" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Imported: ${imported}" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Failed channels: ${failed}" >> "$GITHUB_STEP_SUMMARY"
+            jq -r '.channels[] | "- \(.channel): \(.status), \(.duration_seconds)s, attempts=\(.attempts), imported=\(.imported)"' collector-summary.json >> "$GITHUB_STEP_SUMMARY"
+            if awk "BEGIN { exit !($duration >= 900) }"; then
+              echo "::warning title=Slow collector::Total collector duration ${duration}s exceeded 900s"
+            fi
+            if [ "$failed" -gt 0 ]; then
+              echo "::warning title=Collector failures::${failed} channel(s) failed after retries"
+            fi
+          else
+            echo "## Collector run" >> "$GITHUB_STEP_SUMMARY"
+            echo "No collector summary was produced (workflow failed before collector startup)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload collector summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: collector-summary-${{ github.run_id }}
+          path: collector-summary.json
+          if-no-files-found: ignore
