@@ -48,7 +48,7 @@ function applyCachePolicy(req,response){
   else if(path==="/api/channels") headers.set("Cache-Control","public, max-age=60, stale-while-revalidate=60");
   else if(path==="/api/latest") headers.set("Cache-Control","public, max-age=30, stale-while-revalidate=30");
   else if(path==="/api/search") headers.set("Cache-Control","public, max-age=60, stale-while-revalidate=60");
-  else if(path==="/admin"||path==="/admin/login"||path==="/submit") headers.set("Cache-Control","public, max-age=60, stale-while-revalidate=300");
+  else if(path==="/admin"||path==="/admin/login"||path==="/submit") headers.set("Cache-Control","no-store");
   else if(path==="/"||path.endsWith(".html")) headers.set("Cache-Control","public, max-age=60, stale-while-revalidate=300");
   else if(/\.(?:css|js|png|jpg|jpeg|gif|webp|svg|ico|woff2?)$/i.test(path)) headers.set("Cache-Control","public, max-age=86400, stale-while-revalidate=604800");
 
@@ -280,7 +280,7 @@ async function dispatchCollector(req,env){
   const repo=clean(env.GH_TARGET_REPOSITORY||"");
   const ref=clean(env.GH_TARGET_REF||"");
   if(repo!=="JettKing/telegram-history-search"||ref!=="main")return json({error:"github_dispatch_target_invalid"},503);
-  const r=await fetch(`https://api.github.com/repos/${repo}/actions/workflows/collector.yml/dispatches`,{method:"POST",headers:{Authorization:`Bearer ${env.GH_DISPATCH_TOKEN}`,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28","content-type":"application/json"},body:JSON.stringify({ref,inputs:{target_channel:target}})});
+  const r=await fetch(`https://api.github.com/repos/${repo}/actions/workflows/collector.yml/dispatches`,{method:"POST",headers:{Authorization:`Bearer ${env.GH_DISPATCH_TOKEN}`,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28","User-Agent":"tg-history-search-worker","content-type":"application/json"},body:JSON.stringify({ref,inputs:{target_channel:target}})});
   if(!r.ok)return json({error:"github_dispatch_failed",status:r.status,detail:(await r.text()).slice(0,500)},502);
   await audit(req,env,"sync_channel","channel",target||null);return json({ok:true,target_channel:target||null,ref});
 }
