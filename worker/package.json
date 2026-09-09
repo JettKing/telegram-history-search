@@ -1,8 +1,0 @@
-{
-  "name": "telegram-history-search-worker",
-  "private": true,
-  "version": "0.0.0",
-  "devDependencies": {
-    "wrangler": "4.130.0"
-  }
-}
