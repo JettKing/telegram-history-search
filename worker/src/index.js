@@ -90,7 +90,8 @@ function messageUrl(x){return x.message_url||"";}
 function resultText(x,i=0){const title=esc(x.channel_title|| (x.channel_username?`@${x.channel_username}`:"频道内容"));const body=esc(preview(x.text||`[${mediaLabel(x.media_type)}]`));const date=x.published_at?new Date(x.published_at).toLocaleString("zh-CN",{timeZone:"Asia/Shanghai"}):"未知时间";const url=messageUrl(x);const media=mediaBadge(x);return `<b>${i+1}. ${title}</b>\n${body}\n<code>${date}</code>${media}${url?`\n<a href="${esc(url)}">查看原文 →</a>`:""}`;}
 function mediaLabel(t=""){if(!t)return "文字";if(/photo/i.test(t))return "图片";if(/video/i.test(t))return "视频";if(/document/i.test(t))return "文件";if(/audio|voice/i.test(t))return "音频";if(/webpage/i.test(t))return "链接预览";return "媒体";}
 function formatBytes(n){const x=Number(n||0);if(!x)return "";if(x<1024)return `${x} B`;if(x<1048576)return `${(x/1024).toFixed(1)} KB`;if(x<1073741824)return `${(x/1048576).toFixed(1)} MB`;return `${(x/1073741824).toFixed(1)} GB`;}
-function mediaBadge(x){if(!x.media_type)return "";const size=formatBytes(x.media_size);return `\n📎 <b>${esc(mediaLabel(x.media_type))}</b>${x.media_name?` · ${esc(x.media_name)}`:""}${size?` · ${size}`:""}`;}
+function mediaIcon(t=""){if(/photo/i.test(t))return "🖼️";if(/video/i.test(t))return "🎬";if(/document/i.test(t))return "📄";if(/audio|voice/i.test(t))return "🎵";if(/webpage/i.test(t))return "🔗";return "📎";}
+function mediaBadge(x){if(!x.media_type)return "";const size=formatBytes(x.media_size);return `\n${mediaIcon(x.media_type)} <b>${esc(mediaLabel(x.media_type))}</b>${x.media_name?` · ${esc(x.media_name)}`:""}${size?` · ${size}`:""}`;}
 function mediaSqlFilter(media){return media?" AND m.media_type = ?":"";}
 async function search(env,p={}){
   const q=clean(p.q||"");const limit=clamp(p.limit,1,20);const offset=Math.max(Number(p.offset||0),0);const channel=clean(p.channel||"").replace(/^@/,"");const from=clean(p.from||"");const to=clean(p.to||"");const media=clean(p.media||"");
