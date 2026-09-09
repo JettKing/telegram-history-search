@@ -23,5 +23,3 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 button,a{appearance:none;-webkit-appearance:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .nav-add{width:92px;height:42px;padding:0;line-height:1;white-space:nowrap}
 @media(max-width:760px){header{padding-left:max(22px,env(safe-area-inset-left));padding-right:max(22px,env(safe-area-inset-right));}}
-
-img.logo{object-fit:contain;background:transparent;box-shadow:none;border-radius:0}img.field-icon{width:22px;height:22px;object-fit:contain;flex:0 0 auto}
