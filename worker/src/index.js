@@ -49,7 +49,7 @@ function applyCachePolicy(req,response){
   else if(path==="/api/latest") headers.set("Cache-Control","public, max-age=30, stale-while-revalidate=30");
   else if(path==="/api/search") headers.set("Cache-Control","public, max-age=60, stale-while-revalidate=60");
   else if(path==="/admin"||path==="/admin/login"||path==="/submit") headers.set("Cache-Control","no-store");
-  else if(path==="/"||path.endsWith(".html")) headers.set("Cache-Control","public, max-age=60, stale-while-revalidate=300");
+  else if(path==="/"||path.endsWith(".html")) headers.set("Cache-Control","no-store, max-age=0, must-revalidate");
   else if(/\.(?:css|js|png|jpg|jpeg|gif|webp|svg|ico|woff2?)$/i.test(path)) headers.set("Cache-Control","public, max-age=86400, stale-while-revalidate=604800");
 
   return new Response(response.body,{status:response.status,statusText:response.statusText,headers});

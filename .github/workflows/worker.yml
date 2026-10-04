@@ -31,6 +31,13 @@ jobs:
             web
           sparse-checkout-cone-mode: true
 
+      - name: Version frontend assets
+        run: |
+          version="${GITHUB_SHA:0:7}"
+          sed -i "s/__ASSET_VERSION__/${version}/g" web/index.html
+          echo "Frontend asset version: ${version}"
+          grep -oE '(style.css|app.js)\?v=[^" ]+' web/index.html
+
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v4
         with:

@@ -1,9 +1,9 @@
 # HTML entry points: keep deployments visible quickly.
 /
-  Cache-Control: public, max-age=60, stale-while-revalidate=300
+  Cache-Control: no-store, max-age=0, must-revalidate
 
 /*.html
-  Cache-Control: public, max-age=60, stale-while-revalidate=300
+  Cache-Control: no-store, max-age=0, must-revalidate
 
 # Fingerprinted/query-versioned assets can be reused globally for one day.
 /*.css
