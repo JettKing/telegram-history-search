@@ -133,3 +133,22 @@ CREATE TABLE IF NOT EXISTS admin_audit (
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_admin_audit_created ON admin_audit(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS collector_reconciles (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  channel_id TEXT NOT NULL,
+  mode TEXT NOT NULL,
+  cutoff_at TEXT,
+  status TEXT NOT NULL DEFAULT 'running',
+  scanned INTEGER NOT NULL DEFAULT 0,
+  deleted INTEGER NOT NULL DEFAULT 0,
+  error TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  finished_at TEXT
+);
+CREATE TABLE IF NOT EXISTS collector_reconcile_seen (
+  reconcile_id INTEGER NOT NULL,
+  message_id INTEGER NOT NULL,
+  PRIMARY KEY(reconcile_id, message_id)
+);
+CREATE INDEX IF NOT EXISTS idx_reconcile_seen_run ON collector_reconcile_seen(reconcile_id);

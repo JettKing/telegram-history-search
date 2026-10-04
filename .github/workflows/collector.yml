@@ -2,21 +2,30 @@ name: Telegram Collector
 on:
   schedule:
     - cron: '*/30 * * * *'
+    - cron: '0 3 * * 0'
+    - cron: '0 4 1 * *'
   workflow_dispatch:
     inputs:
       target_channel:
         description: "只同步指定频道（可选）"
         required: false
         type: string
+      collect_mode:
+        description: "采集模式"
+        required: true
+        default: incremental
+        type: choice
+        options:
+          - incremental
+          - recent_reconcile
+          - full_reconcile
 jobs:
   collect:
     runs-on: ubuntu-latest
     concurrency:
       group: telegram-collector-production
       cancel-in-progress: false
-    # GitHub Actions cron is UTC; this schedule intentionally runs every 30 minutes.
-    # All persisted timestamps are normalized to UTC and rendered as Asia/Shanghai in the UI.
-    timeout-minutes: 25
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v7
@@ -24,7 +33,19 @@ jobs:
           python-version: '3.12'
       - name: Install dependencies
         run: pip install -r collector/requirements.txt
-      - name: Run incremental collector
+      - name: Select collector mode
+        id: mode
+        shell: bash
+        env:
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
+          DISPATCH_MODE: ${{ inputs.collect_mode }}
+        run: |
+          mode="${DISPATCH_MODE:-incremental}"
+          if [ "$EVENT_SCHEDULE" = "0 3 * * 0" ]; then mode="recent_reconcile"; fi
+          if [ "$EVENT_SCHEDULE" = "0 4 1 * *" ]; then mode="full_reconcile"; fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "Selected collector mode: $mode"
+      - name: Run collector
         env:
           TG_API_ID: ${{ secrets.TG_API_ID }}
           TG_API_HASH: ${{ secrets.TG_API_HASH }}
@@ -33,6 +54,8 @@ jobs:
           WORKER_INGEST_TOKEN: ${{ secrets.WORKER_INGEST_TOKEN }}
           BATCH_SIZE: 250
           TARGET_CHANNEL: ${{ inputs.target_channel }}
+          COLLECT_MODE: ${{ steps.mode.outputs.mode }}
+          RECONCILE_DAYS: 30
           MAX_CHANNEL_RETRIES: 2
           RETRY_DELAY_SECONDS: 5
           CHANNEL_WARN_SECONDS: 300
@@ -40,7 +63,7 @@ jobs:
           COLLECTOR_SUMMARY_PATH: collector-summary.json
         run: |
           for attempt in 1 2 3; do
-            echo "Collector attempt ${attempt}/3"
+            echo "Collector attempt ${attempt}/3 mode=${COLLECT_MODE}"
             if python collector/collector.py; then
               exit 0
             fi
@@ -57,13 +80,18 @@ jobs:
             duration=$(jq -r '.duration_seconds // 0' collector-summary.json)
             failed=$(jq -r '.failed_channels // 0' collector-summary.json)
             imported=$(jq -r '.total_imported // 0' collector-summary.json)
+            scanned=$(jq -r '.total_scanned // 0' collector-summary.json)
+            deleted=$(jq -r '.total_deleted // 0' collector-summary.json)
             echo "## Collector run" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Mode: $(jq -r '.mode // "unknown"' collector-summary.json)" >> "$GITHUB_STEP_SUMMARY"
             echo "- Duration: ${duration}s" >> "$GITHUB_STEP_SUMMARY"
-            echo "- Imported: ${imported}" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Imported/updated: ${imported}" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Scanned: ${scanned}" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Deleted after safe reconciliation: ${deleted}" >> "$GITHUB_STEP_SUMMARY"
             echo "- Failed channels: ${failed}" >> "$GITHUB_STEP_SUMMARY"
-            jq -r '.channels[] | "- \(.channel): \(.status), \(.duration_seconds)s, attempts=\(.attempts), imported=\(.imported)"' collector-summary.json >> "$GITHUB_STEP_SUMMARY"
-            if awk "BEGIN { exit !($duration >= 900) }"; then
-              echo "::warning title=Slow collector::Total collector duration ${duration}s exceeded 900s"
+            jq -r '.channels[] | "- \(.channel): \(.status), \(.duration_seconds)s, scanned=\(.scanned), imported=\(.imported), deleted=\(.deleted), attempts=\(.attempts)"' collector-summary.json >> "$GITHUB_STEP_SUMMARY"
+            if awk "BEGIN { exit !($duration >= 5400) }"; then
+              echo "::warning title=Slow collector::Total collector duration ${duration}s exceeded 90 minutes"
             fi
             if [ "$failed" -gt 0 ]; then
               echo "::warning title=Collector failures::${failed} channel(s) failed after retries"
