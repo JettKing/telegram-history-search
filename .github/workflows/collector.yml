@@ -60,11 +60,6 @@ jobs:
           RETRY_DELAY_SECONDS: 5
           CHANNEL_WARN_SECONDS: 300
           RUN_WARN_SECONDS: 900
-          LINK_CHECK_ENABLED: 1
-          LINK_CHECK_LIMIT: 80
-          LINK_CHECK_MAX_AGE_HOURS: 24
-          LINK_CHECK_TIMEOUT_SECONDS: 12
-          LINK_CHECK_CONCURRENCY: 8
           COLLECTOR_SUMMARY_PATH: collector-summary.json
         run: |
           for attempt in 1 2 3; do
@@ -87,10 +82,6 @@ jobs:
             imported=$(jq -r '.total_imported // 0' collector-summary.json)
             scanned=$(jq -r '.total_scanned // 0' collector-summary.json)
             deleted=$(jq -r '.total_deleted // 0' collector-summary.json)
-            links_checked=$(jq -r '.links_checked // 0' collector-summary.json)
-            links_healthy=$(jq -r '.links_healthy // 0' collector-summary.json)
-            links_unhealthy=$(jq -r '.links_unhealthy // 0' collector-summary.json)
-            link_errors=$(jq -r '.link_check_errors // 0' collector-summary.json)
             echo "## Collector run" >> "$GITHUB_STEP_SUMMARY"
             echo "- Mode: $(jq -r '.mode // "unknown"' collector-summary.json)" >> "$GITHUB_STEP_SUMMARY"
             echo "- Duration: ${duration}s" >> "$GITHUB_STEP_SUMMARY"
@@ -98,7 +89,6 @@ jobs:
             echo "- Scanned: ${scanned}" >> "$GITHUB_STEP_SUMMARY"
             echo "- Deleted after safe reconciliation: ${deleted}" >> "$GITHUB_STEP_SUMMARY"
             echo "- Failed channels: ${failed}" >> "$GITHUB_STEP_SUMMARY"
-            echo "- Link health: checked=${links_checked}, healthy=${links_healthy}, unhealthy=${links_unhealthy}, errors=${link_errors}" >> "$GITHUB_STEP_SUMMARY"
             jq -r '.channels[] | "- \(.channel): \(.status), \(.duration_seconds)s, scanned=\(.scanned), imported=\(.imported), deleted=\(.deleted), attempts=\(.attempts)"' collector-summary.json >> "$GITHUB_STEP_SUMMARY"
             if awk "BEGIN { exit !($duration >= 5400) }"; then
               echo "::warning title=Slow collector::Total collector duration ${duration}s exceeded 90 minutes"

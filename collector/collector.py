@@ -1,10 +1,7 @@
 import asyncio
 import json
 import os
-import re
 import time
-from ipaddress import ip_address
-from urllib.parse import urlsplit
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -28,11 +25,6 @@ MAX_CHANNEL_RETRIES = max(0, int(os.environ.get("MAX_CHANNEL_RETRIES", "2")))
 RETRY_DELAY_SECONDS = max(1, int(os.environ.get("RETRY_DELAY_SECONDS", "5")))
 CHANNEL_WARN_SECONDS = max(1, int(os.environ.get("CHANNEL_WARN_SECONDS", "300")))
 RUN_WARN_SECONDS = max(1, int(os.environ.get("RUN_WARN_SECONDS", "900")))
-LINK_CHECK_ENABLED = os.environ.get("LINK_CHECK_ENABLED", "1").strip().lower() not in {"0", "false", "no"}
-LINK_CHECK_LIMIT = max(1, int(os.environ.get("LINK_CHECK_LIMIT", "80")))
-LINK_CHECK_MAX_AGE_HOURS = max(1, int(os.environ.get("LINK_CHECK_MAX_AGE_HOURS", "24")))
-LINK_CHECK_TIMEOUT_SECONDS = max(3, int(os.environ.get("LINK_CHECK_TIMEOUT_SECONDS", "12")))
-LINK_CHECK_CONCURRENCY = max(1, int(os.environ.get("LINK_CHECK_CONCURRENCY", "8")))
 SUMMARY_PATH = os.environ.get("COLLECTOR_SUMMARY_PATH", "collector-summary.json")
 
 if COLLECT_MODE not in {"incremental", "recent_reconcile", "full_reconcile"}:
@@ -95,10 +87,6 @@ async def main():
         "total_imported": 0,
         "total_scanned": 0,
         "total_deleted": 0,
-        "links_checked": 0,
-        "links_healthy": 0,
-        "links_unhealthy": 0,
-        "link_check_errors": 0,
         "channels": [],
         "_started_monotonic": time.monotonic(),
     }
@@ -136,13 +124,6 @@ async def main():
                 else:
                     failed += 1
                     summary["failed_channels"] += 1
-            if LINK_CHECK_ENABLED:
-                try:
-                    link_summary = await check_links(http)
-                    summary.update(link_summary)
-                except Exception as exc:
-                    summary["link_check_errors"] = 1
-                    print(f"::warning title=Link health check::{str(exc)[:500]}")
     finally:
         if client is not None:
             await client.disconnect()
@@ -151,82 +132,6 @@ async def main():
         raise RuntimeError(f"{failed} channel(s) failed after retries")
     if summary["duration_seconds"] >= RUN_WARN_SECONDS:
         print(f"::warning title=Slow collector::run took {summary['duration_seconds']}s")
-
-
-URL_RE = re.compile(r"https?://[^\s<>\"'`]+", re.IGNORECASE)
-
-def safe_external_url(raw):
-    value = str(raw or "").rstrip("),.;!?]}>")
-    try:
-        parsed = urlsplit(value)
-        if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username or parsed.password:
-            return None
-        if parsed.port not in {None, 80, 443}:
-            return None
-        host = parsed.hostname.lower().rstrip(".")
-        if host in {"localhost", "localhost.localdomain"} or host.endswith((".local", ".internal")):
-            return None
-        try:
-            ip = ip_address(host)
-            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast or ip.is_unspecified:
-                return None
-        except ValueError:
-            pass
-        return value[:2000]
-    except ValueError:
-        return None
-
-async def check_one_link(http, url, semaphore):
-    async with semaphore:
-        started = time.monotonic()
-        try:
-            response = await http.head(url, follow_redirects=False)
-            if response.status_code in {405, 501}:
-                response = await http.get(url, headers={"Range": "bytes=0-0"}, follow_redirects=False)
-            code = int(response.status_code)
-            return {
-                "url": url,
-                "status": "healthy" if 200 <= code < 400 else "unhealthy",
-                "status_code": code,
-                "final_url": str(response.headers.get("location") or url)[:2000],
-                "response_ms": round((time.monotonic() - started) * 1000),
-                "error": None,
-            }
-        except Exception as exc:
-            return {
-                "url": url,
-                "status": "error",
-                "status_code": None,
-                "final_url": None,
-                "response_ms": round((time.monotonic() - started) * 1000),
-                "error": str(exc)[:500],
-            }
-
-async def check_links(http):
-    response = await http.get(
-        f"{API_BASE_URL}/api/collector/link-health?limit={LINK_CHECK_LIMIT}&max_age_hours={LINK_CHECK_MAX_AGE_HOURS}",
-        headers=auth(),
-    )
-    response.raise_for_status()
-    candidates = []
-    for row in response.json().get("links", []):
-        url = safe_external_url(row.get("url"))
-        if url and not url.lower().startswith(("https://t.me/", "http://t.me/", "https://telegram.me/", "http://telegram.me/")):
-            candidates.append(url)
-    candidates = list(dict.fromkeys(candidates))[:LINK_CHECK_LIMIT]
-    if not candidates:
-        return {"links_checked": 0, "links_healthy": 0, "links_unhealthy": 0, "link_check_errors": 0}
-    timeout = httpx.Timeout(LINK_CHECK_TIMEOUT_SECONDS)
-    semaphore = asyncio.Semaphore(LINK_CHECK_CONCURRENCY)
-    async with httpx.AsyncClient(timeout=timeout, headers={"User-Agent": "telegram-history-search-link-check/1.0"}) as checker:
-        results = await asyncio.gather(*(check_one_link(checker, url, semaphore) for url in candidates))
-    saved = await http.post(f"{API_BASE_URL}/api/collector/link-health", json={"results": results}, headers=auth())
-    saved.raise_for_status()
-    healthy = sum(1 for x in results if x["status"] == "healthy")
-    unhealthy = sum(1 for x in results if x["status"] == "unhealthy")
-    errors = sum(1 for x in results if x["status"] == "error")
-    print(f"[LINKS] checked={len(results)} healthy={healthy} unhealthy={unhealthy} errors={errors}")
-    return {"links_checked": len(results), "links_healthy": healthy, "links_unhealthy": unhealthy, "link_check_errors": errors}
 
 
 async def collect_channel_with_retry(client, http, channel):
