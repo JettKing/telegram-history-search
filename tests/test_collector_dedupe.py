@@ -19,10 +19,23 @@ def load_dedupe_channels():
     return namespace["dedupe_channels"]
 
 
+def load_normalize_search_text():
+    tree = ast.parse(COLLECTOR.read_text(encoding="utf-8"))
+    functions = [
+        node for node in tree.body
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "normalize_search_text"
+    ]
+    namespace = {}
+    exec(compile(ast.Module(body=functions, type_ignores=[]), str(COLLECTOR), "exec"), namespace)
+    return namespace["normalize_search_text"]
+
+
 class CollectorDedupeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.dedupe = staticmethod(load_dedupe_channels())
+        cls.normalize_search_text = staticmethod(load_normalize_search_text())
 
     def test_prefers_record_with_existing_messages(self):
         rows = [
@@ -61,6 +74,16 @@ class CollectorDedupeTests(unittest.TestCase):
     def test_ignores_rows_without_identity(self):
         rows = [{"id": 1, "telegram_id": "", "username": ""}, {"id": 2}]
         self.assertEqual(self.dedupe(rows), [])
+
+    def test_normalizes_search_text_case_and_whitespace(self):
+        self.assertEqual(self.normalize_search_text("  Hello   WORLD  "), "hello world")
+        self.assertEqual(self.normalize_search_text("ÄÖÜ"), "äöü")
+
+    def test_collector_contains_resume_and_flood_wait_controls(self):
+        source = COLLECTOR.read_text(encoding="utf-8")
+        self.assertIn("FloodWaitError", source)
+        self.assertIn("MAX_FLOOD_WAIT_SECONDS", source)
+        self.assertIn('channel["last_message_id"]', source)
 
 
 if __name__ == "__main__":

@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 
 import httpx
 from telethon import TelegramClient
+from telethon.errors import FloodWaitError
 from telethon.sessions import StringSession
 
 API_ID = int(os.environ["TG_API_ID"])
@@ -23,6 +24,9 @@ COLLECT_MODE = os.environ.get("COLLECT_MODE", "incremental").strip().lower()
 RECONCILE_DAYS = max(1, int(os.environ.get("RECONCILE_DAYS", "30")))
 MAX_CHANNEL_RETRIES = max(0, int(os.environ.get("MAX_CHANNEL_RETRIES", "2")))
 RETRY_DELAY_SECONDS = max(1, int(os.environ.get("RETRY_DELAY_SECONDS", "5")))
+FLOOD_WAIT_BUFFER_SECONDS = max(0, int(os.environ.get("FLOOD_WAIT_BUFFER_SECONDS", "5")))
+MAX_FLOOD_WAIT_SECONDS = max(1, int(os.environ.get("MAX_FLOOD_WAIT_SECONDS", "3600")))
+MAX_FLOOD_WAITS = max(0, int(os.environ.get("MAX_FLOOD_WAITS", "3")))
 CHANNEL_WARN_SECONDS = max(1, int(os.environ.get("CHANNEL_WARN_SECONDS", "300")))
 RUN_WARN_SECONDS = max(1, int(os.environ.get("RUN_WARN_SECONDS", "900")))
 SUMMARY_PATH = os.environ.get("COLLECTOR_SUMMARY_PATH", "collector-summary.json")
@@ -37,6 +41,11 @@ def auth():
 
 def normalize_username(value):
     return str(value or "").strip().lstrip("@").lower()
+
+
+def normalize_search_text(value):
+    """Canonicalize searchable text without changing the display copy."""
+    return " ".join(str(value or "").casefold().split())
 
 
 def normalize_channel_id(value):
@@ -138,7 +147,10 @@ async def collect_channel_with_retry(client, http, channel):
     label = channel.get("username") or channel.get("telegram_id") or "unknown"
     started = time.monotonic()
     errors = []
-    for attempt in range(1, MAX_CHANNEL_RETRIES + 2):
+    flood_waits = 0
+    attempt = 1
+    max_attempts = MAX_CHANNEL_RETRIES + 1
+    while attempt <= max_attempts:
         try:
             result = await collect_channel(client, http, channel)
             result.update({"channel": label, "status": "success", "attempts": attempt, "duration_seconds": round(time.monotonic() - started, 2), "error": None})
@@ -146,12 +158,23 @@ async def collect_channel_with_retry(client, http, channel):
                 print(f"::warning title=Slow channel::{label} took {result['duration_seconds']}s")
             print(f"[CHANNEL] {label} duration={result['duration_seconds']}s attempts={attempt}")
             return result
+        except FloodWaitError as exc:
+            flood_waits += 1
+            wait_seconds = max(1, int(getattr(exc, "seconds", 0) or 0))
+            if flood_waits > MAX_FLOOD_WAITS or wait_seconds > MAX_FLOOD_WAIT_SECONDS:
+                errors.append(f"Telegram FloodWait {wait_seconds}s exceeded collector safety limit")
+                break
+            total_wait = wait_seconds + FLOOD_WAIT_BUFFER_SECONDS
+            print(f"::warning title=Telegram rate limit::{label} requested {wait_seconds}s; waiting {total_wait}s before resuming")
+            await asyncio.sleep(total_wait)
+            continue
         except Exception as exc:
             errors.append(str(exc)[:500])
-            if attempt <= MAX_CHANNEL_RETRIES:
+            if attempt < max_attempts:
                 delay = RETRY_DELAY_SECONDS * attempt
                 print(f"::warning title=Channel retry::{label} failed on attempt {attempt}; retrying in {delay}s: {errors[-1]}")
                 await asyncio.sleep(delay)
+            attempt += 1
     duration = round(time.monotonic() - started, 2)
     print(f"::warning title=Channel failed::{label} failed after {len(errors)} attempts")
     return {"channel": label, "status": "failed", "attempts": len(errors), "duration_seconds": duration, "imported": 0, "scanned": 0, "deleted": 0, "error": errors[-1] if errors else "unknown error"}
@@ -196,15 +219,19 @@ async def collect_channel(client, http, channel):
             if getattr(msg, "file", None):
                 media_name = getattr(msg.file, "name", None)
                 media_size = getattr(msg.file, "size", None)
-            batch.append({"channel_id": str(entity.id), "channel_username": username, "channel_title": title, "message_id": msg.id, "published_at": utc_iso(msg.date), "edited_at": utc_iso(msg.edit_date), "text": msg.message or "", "media_type": media_type, "media_name": media_name, "media_size": media_size, "message_url": f"https://t.me/{username}/{msg.id}" if username else None, "search_text": msg.message or ""})
+            batch.append({"channel_id": str(entity.id), "channel_username": username, "channel_title": title, "message_id": msg.id, "published_at": utc_iso(msg.date), "edited_at": utc_iso(msg.edit_date), "text": msg.message or "", "media_type": media_type, "media_name": media_name, "media_size": media_size, "message_url": f"https://t.me/{username}/{msg.id}" if username else None, "search_text": normalize_search_text(msg.message)})
             if len(batch) >= BATCH_SIZE:
+                batch_max_id = max(int(item["message_id"]) for item in batch)
                 await push(http, batch, reconcile_id, seen_ids)
                 imported += len(batch)
+                channel["last_message_id"] = max(int(channel.get("last_message_id") or 0), batch_max_id)
                 batch.clear()
                 seen_ids.clear()
         if batch:
+            batch_max_id = max(int(item["message_id"]) for item in batch)
             await push(http, batch, reconcile_id, seen_ids)
             imported += len(batch)
+            channel["last_message_id"] = max(int(channel.get("last_message_id") or 0), batch_max_id)
         if reconcile_id:
             finish = await http.post(f"{API_BASE_URL}/api/collector/reconcile/finish", json={"reconcile_id": reconcile_id, "scanned": scanned}, headers=auth())
             finish.raise_for_status()

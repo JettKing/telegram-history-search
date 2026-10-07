@@ -212,6 +212,16 @@ npm install -g wrangler
 | `WORKER_API_BASE_URL` | Cloudflare Worker API 地址 |
 | `WORKER_INGEST_TOKEN` | 采集器访问 Worker 的认证凭据 |
 
+采集器还支持以下可靠性参数（GitHub Actions 已配置默认值）：
+
+| 变量 | 默认值 | 用途 |
+| --- | ---: | --- |
+| `FLOOD_WAIT_BUFFER_SECONDS` | `5` | Telegram 限流等待时间额外增加的安全缓冲 |
+| `MAX_FLOOD_WAIT_SECONDS` | `3600` | 单次限流等待的最大安全上限 |
+| `MAX_FLOOD_WAITS` | `3` | 单频道允许自动等待的最大次数 |
+
+增量采集会在每个成功提交批次后推进频道的 `last_message_id`。如果中途失败，下一次重试会从已成功提交的游标继续，而不是从频道起点重新采集。采集器保留原始 `text` 用于展示，同时将 `search_text` 统一为 Unicode `casefold()`、压缩空白后的规范形式。
+
 具体变量名称应以仓库当前 `.github/workflows/collector.yml` 和 `collector/collector.py` 的实际配置为准。
 
 ## 使用方法
