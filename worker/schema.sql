@@ -39,6 +39,21 @@ CREATE INDEX IF NOT EXISTS idx_messages_published ON messages(published_at DESC)
 CREATE INDEX IF NOT EXISTS idx_messages_username ON messages(channel_username);
 CREATE INDEX IF NOT EXISTS idx_messages_media ON messages(media_type);
 
+CREATE TABLE IF NOT EXISTS link_health (
+  url TEXT PRIMARY KEY,
+  status TEXT NOT NULL DEFAULT 'pending',
+  status_code INTEGER,
+  final_url TEXT,
+  response_ms INTEGER,
+  error TEXT,
+  first_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  checked_at TEXT,
+  source_count INTEGER NOT NULL DEFAULT 1
+);
+CREATE INDEX IF NOT EXISTS idx_link_health_check ON link_health(status, checked_at);
+CREATE INDEX IF NOT EXISTS idx_link_health_seen ON link_health(last_seen_at DESC);
+
 CREATE TABLE IF NOT EXISTS collection_runs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   channel_id TEXT,
