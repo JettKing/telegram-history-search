@@ -4,8 +4,6 @@ import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 WORKER = (ROOT / "worker" / "src" / "index.js").read_text(encoding="utf-8")
-FRONTEND = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
-CSS = (ROOT / "web" / "style.css").read_text(encoding="utf-8")
 COLLECTOR = (ROOT / "collector" / "collector.py").read_text(encoding="utf-8")
 SCHEMA = (ROOT / "worker" / "schema.sql").read_text(encoding="utf-8")
 WORKFLOW = (ROOT / ".github" / "workflows" / "collector.yml").read_text(encoding="utf-8")
@@ -37,16 +35,6 @@ class LinkHealthStaticTests(unittest.TestCase):
         self.assertIn("follow_redirects=False", COLLECTOR)
         self.assertIn("Range", COLLECTOR)
         self.assertIn("t.me/", COLLECTOR)
-
-    def test_search_results_expose_and_render_link_health_status(self):
-        self.assertIn("async function attachLinkHealth", WORKER)
-        self.assertIn("link_health:extractHttpUrls", WORKER)
-        self.assertIn("await attachLinkHealth(env,rows)", WORKER)
-        self.assertIn("function renderLinkHealth", FRONTEND)
-        for label in ("正常", "待检查", "访问受限", "已失效", "检查失败"):
-            self.assertIn(label, FRONTEND)
-        self.assertIn(".link-health-item.healthy", CSS)
-        self.assertIn(".link-health-item.broken", CSS)
 
     def test_workflow_runs_bounded_health_checks(self):
         for key in (

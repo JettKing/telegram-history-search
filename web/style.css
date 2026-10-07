@@ -30,14 +30,3 @@ html,body{max-width:100%;overflow-x:hidden}
 .section-title>div,.result-top>div{min-width:0;max-width:100%}
 .section-title span,.result h3,.result-channel,.result p,.result-link{max-width:100%;overflow-wrap:anywhere;word-break:break-word}
 @media(max-width:760px){.section-title{width:100%;min-width:0}.section-title>div{flex:1 1 auto;min-width:0}.latest{flex:0 0 auto}.result{width:100%;min-width:0;overflow:hidden}}
-
-/* Link health badges in search results */
-.link-health{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 12px;padding:8px 9px;background:#f8fbfe;border:1px solid #e3eff7;border-radius:10px;color:#668096;font-size:11px;line-height:1.4}
-.link-health-item{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:999px;background:#fff;border:1px solid #dcebf5;white-space:nowrap}
-.link-health-dot{width:6px;height:6px;border-radius:50%;background:#8ea3b3;flex:0 0 auto}
-.link-health-item.healthy{color:#22805d;border-color:#cdebdc;background:#f5fff9}.link-health-item.healthy .link-health-dot{background:#2aa66f}
-.link-health-item.broken{color:#bd4b55;border-color:#f0cfd2;background:#fff8f8}.link-health-item.broken .link-health-dot{background:#d65b65}
-.link-health-item.restricted{color:#a66b19;border-color:#f1dfb9;background:#fffaf0}.link-health-item.restricted .link-health-dot{background:#d99a32}
-.link-health-item.error{color:#a25c31;border-color:#f0d7c5;background:#fffaf5}.link-health-item.error .link-health-dot{background:#d77d42}
-.link-health-item.pending{color:#71879a}.link-health-more{color:#8297a8}
-@media(max-width:390px){.link-health{font-size:10px;padding:7px}.link-health-item{padding:3px 5px}}
