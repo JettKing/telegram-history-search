@@ -179,20 +179,7 @@ npm install -g wrangler
 
 完成配置后，可以手动运行 GitHub Actions 测试首次采集。
 
-### 5. SEO 配置
-
-首页首屏包含可直接被搜索引擎读取的标题、描述、正文、搜索入口和结构化内容。Worker 还提供：
-
-- `/robots.txt`：允许公开首页和提交页，禁止 API、后台和 webhook；
-- `/sitemap.xml`：列出公开首页与频道提交页；
-- `/manus-routes.json`：声明公开页面路由；
-- `/admin`、`/admin/login`：使用 `noindex,nofollow`，不进入搜索索引。
-
-必须在 Cloudflare Worker Variables 中配置真实的 HTTPS `PUBLIC_SITE_ORIGIN`，例如 `https://search.example.com`。未配置时，Worker 不会猜测内部 Worker 地址，也不会输出错误的绝对 canonical 或 sitemap URL。
-
-部署后应检查首页原始 HTML（不执行 JavaScript）是否包含 title、description、正文和 canonical，并检查 `/robots.txt`、`/sitemap.xml` 返回内容与状态码。
-
-### 6. 部署 Web 页面
+### 5. 部署 Web 页面
 
 `web/` 目录可以部署到 Cloudflare Pages，也可以通过 Cloudflare Workers 的静态资源能力托管。
 
@@ -212,7 +199,6 @@ npm install -g wrangler
 | `GH_DISPATCH_TOKEN` | 管理后台触发 GitHub Actions |
 | `GH_TARGET_REPOSITORY` | GitHub 仓库，固定为 `JettKing/telegram-history-search` |
 | `GH_TARGET_REF` | GitHub 分支，固定为 `main` |
-| `PUBLIC_SITE_ORIGIN` | 公开站点的 HTTPS 根地址，用于 canonical、Open Graph、JSON-LD 和 sitemap |
 
 ### GitHub Actions / Collector
 
