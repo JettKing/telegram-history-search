@@ -1,1 +1,70 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#edf7ff"><meta name="description" content="Telegram 频道历史内容检索"><title>频道历史内容 · Telegram Search</title><link rel="stylesheet" href="style.css?v=__ASSET_VERSION__"></head><body><header><div class="brand"><div class="logo">➤</div><div><b>频道历史内容</b><span>Telegram Search</span></div></div><nav><a class="nav-add" href="/submit">添加频道</a></nav></header><main><section class="hero"><div class="hero-copy"><h1>让每一条优质内容<br><strong>都能再次被发现</strong></h1><p>检索已采集的 Telegram 频道历史内容，<br>快速定位文字、图片、视频、文件与音频资源。</p><div class="search"><span class="search-icon">⌕</span><input id="q" autocomplete="off" placeholder="搜索：AI 工具、Midjourney、教程…" data-short-placeholder="搜索关键词…"><button id="searchBtn">搜索</button></div><div class="filters"><div class="channel-wrap"><span class="field-icon">➤</span><input id="channel" list="channelList" placeholder="频道 @username（可选）"><datalist id="channelList"></datalist></div><label class="date-field"><span>开始日期</span><input id="from" type="date" aria-label="开始日期"></label><span class="date-separator">至</span><label class="date-field"><span>结束日期</span><input id="to" type="date" aria-label="结束日期"></label><button id="clearFilters" class="clear-filters" type="button" hidden>清除条件</button></div></div><div class="phone"><div class="phone-top">频道历史搜索</div><div class="promo-sub">输入关键词，快速找到历史内容</div><div class="promo-result"><strong>AI 工具推荐</strong><span>频道：@xph_fx</span><p>整理了近期值得关注的AI工具与实用技巧……</p></div><div class="promo-result"><strong>Midjourney 教程</strong><span>频道：@xph_fx</span><p>从基础操作到高级参数的完整教程和技巧集……</p></div></div></section><section id="results"><div class="section-title"><div><h2>搜索结果</h2><span id="hint">输入关键词开始检索</span></div><button class="latest" id="latestBtn">查看最新</button></div><div id="list" class="list"></div><div id="more" class="more"></div><span id="resultStatus" class="sr-only" aria-live="polite"></span></section></main><script src="app.js?v=__ASSET_VERSION__"></script></body></html>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#edf7ff">
+  <meta name="description" content="搜索已采集的 Telegram 频道历史内容，快速定位 AI 工具、教程、图片、视频、文件和音频资源。">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="keywords" content="Telegram频道搜索,Telegram历史消息,频道内容检索,AI工具,教程资源">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Telegram Search">
+  <meta property="og:title" content="Telegram 频道历史内容搜索">
+  <meta property="og:description" content="搜索已采集的 Telegram 频道历史内容，快速定位文字、图片、视频、文件与音频资源。">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Telegram 频道历史内容搜索">
+  <meta name="twitter:description" content="搜索已采集的 Telegram 频道历史内容，快速定位文字、图片、视频、文件与音频资源。">
+  <!-- Worker only fills absolute canonical/social URLs when PUBLIC_SITE_ORIGIN is configured. -->
+  <!-- SEO_ORIGIN_META -->
+  <title>Telegram 频道历史内容搜索 · Telegram Search</title>
+  <link rel="stylesheet" href="style.css?v=__ASSET_VERSION__">
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo" aria-hidden="true">➤</div>
+      <div><b>频道历史内容</b><span>Telegram Search</span></div>
+    </div>
+    <nav aria-label="主导航"><a class="nav-add" href="/submit">添加频道</a></nav>
+  </header>
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <h1 id="hero-title">让每一条优质内容<br><strong>都能再次被发现</strong></h1>
+        <p>检索已采集的 Telegram 频道历史内容，快速定位文字、图片、视频、文件与音频资源。</p>
+        <form class="search" id="searchForm" role="search">
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <label class="sr-only" for="q">搜索 Telegram 频道历史内容</label>
+          <input id="q" autocomplete="off" placeholder="搜索：AI 工具、Midjourney、教程…" data-short-placeholder="搜索关键词…">
+          <button id="searchBtn" type="submit">搜索</button>
+        </form>
+        <div class="filters">
+          <div class="channel-wrap"><span class="field-icon" aria-hidden="true">➤</span><label class="sr-only" for="channel">频道用户名</label><input id="channel" list="channelList" placeholder="频道 @username（可选）"><datalist id="channelList"></datalist></div>
+          <label class="date-field"><span>开始日期</span><input id="from" type="date" aria-label="开始日期"></label>
+          <span class="date-separator" aria-hidden="true">至</span>
+          <label class="date-field"><span>结束日期</span><input id="to" type="date" aria-label="结束日期"></label>
+          <button id="clearFilters" class="clear-filters" type="button" hidden>清除条件</button>
+        </div>
+      </div>
+      <div class="phone" aria-label="搜索功能预览">
+        <div class="phone-top">频道历史搜索</div>
+        <div class="promo-sub">输入关键词，快速找到历史内容</div>
+        <div class="promo-result"><strong>AI 工具推荐</strong><span>频道：@xph_fx</span><p>整理了近期值得关注的 AI 工具与实用技巧……</p></div>
+        <div class="promo-result"><strong>Midjourney 教程</strong><span>频道：@xph_fx</span><p>从基础操作到高级参数的完整教程和技巧集……</p></div>
+      </div>
+    </section>
+    <section id="results" aria-labelledby="results-title">
+      <div class="section-title"><div><h2 id="results-title">搜索结果</h2><span id="hint">输入关键词开始检索</span></div><button class="latest" id="latestBtn" type="button">查看最新</button></div>
+      <div id="list" class="list"></div>
+      <div id="more" class="more"></div>
+      <span id="resultStatus" class="sr-only" aria-live="polite"></span>
+    </section>
+    <section class="seo-intro" aria-labelledby="intro-title">
+      <h2 id="intro-title">Telegram 频道历史内容检索</h2>
+      <p>Telegram Search 帮助你从已收录的公开频道内容中查找历史消息。你可以按关键词、频道和日期范围筛选，并直接打开 Telegram 原消息。</p>
+      <div class="seo-links"><a href="/submit">提交频道</a><a href="/robots.txt">爬虫规则</a><a href="/sitemap.xml">站点地图</a></div>
+    </section>
+  </main>
+  <script src="app.js?v=__ASSET_VERSION__"></script>
+</body>
+</html>
