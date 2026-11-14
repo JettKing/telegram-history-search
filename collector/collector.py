@@ -185,6 +185,9 @@ async def collect_channel(client, http, channel):
     entity = await client.get_entity(ref)
     username = normalize_username(getattr(entity, "username", None) or channel.get("username") or "")
     title = getattr(entity, "title", None) or channel.get("title") or username
+    # Keep the D1/Worker channel identity (usually -100...); Telethon entity.id
+    # is a different representation and must not be used for reconciliation.
+    canonical_channel_id = str(channel.get("telegram_id") or entity.id)
     last_id = int(channel.get("last_message_id") or 0)
     reconcile_id = None
     run_id = None
@@ -194,11 +197,11 @@ async def collect_channel(client, http, channel):
     cutoff = None
     if COLLECT_MODE == "recent_reconcile":
         cutoff = datetime.now(timezone.utc) - timedelta(days=RECONCILE_DAYS)
-    start_response = await http.post(f"{API_BASE_URL}/api/collector/run/start", json={"channel_id": str(entity.id), "mode": COLLECT_MODE}, headers=auth())
+    start_response = await http.post(f"{API_BASE_URL}/api/collector/run/start", json={"channel_id": canonical_channel_id, "mode": COLLECT_MODE}, headers=auth())
     start_response.raise_for_status()
     run_id = start_response.json().get("run_id")
     if COLLECT_MODE != "incremental":
-        reconcile_response = await http.post(f"{API_BASE_URL}/api/collector/reconcile/start", json={"channel_id": str(entity.id), "mode": COLLECT_MODE, "cutoff_at": utc_iso(cutoff)}, headers=auth())
+        reconcile_response = await http.post(f"{API_BASE_URL}/api/collector/reconcile/start", json={"channel_id": canonical_channel_id, "mode": COLLECT_MODE, "cutoff_at": utc_iso(cutoff)}, headers=auth())
         reconcile_response.raise_for_status()
         reconcile_id = reconcile_response.json().get("reconcile_id")
     print(f"[SYNC] {title} (@{username}) mode={COLLECT_MODE} after message {last_id}")
