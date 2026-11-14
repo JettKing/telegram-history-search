@@ -469,7 +469,7 @@ button,input{appearance:none;-webkit-appearance:none;-webkit-tap-highlight-color
       </section>
     </div>
     <section id="channelList" class="panel" style="margin-bottom:16px">
-      <div class="panel-head"><div><h2 class="panel-title">频道列表</h2><div class="panel-sub">启用频道会进入自动增量采集</div></div><div class="top-actions"><button class="btn soft small" id="syncAllBtn" onclick="syncAll()">立即同步全部</button><button class="btn small" id="fullReconcileBtn" onclick="fullReconcile()">立即全量校准</button></div></div>
+      <div class="panel-head"><div><h2 class="panel-title">频道列表</h2><div class="panel-sub">启用频道会进入自动增量采集</div></div><div class="top-actions"><button class="btn soft small" id="syncAllBtn" onclick="syncAll()">同步全部</button><button class="btn small" id="fullReconcileBtn" onclick="fullReconcile()">全量校准</button></div></div>
       <div class="searchbar"><input id="channelSearch" placeholder="搜索频道名称或用户名…" oninput="renderChannels()"><button class="btn small" onclick="refreshAll()">刷新</button></div>
       <div id="channelsPane" class="rows">加载中…</div>
     </section>
